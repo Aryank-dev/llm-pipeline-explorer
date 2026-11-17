@@ -3,23 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LLM Pipeline Explorer — Tokenizer, Vectors & 3D Latent Space</title>
-<meta name="description" content="Interactive visual explorer demonstrating how text becomes tokens, turns into high-dimensional vectors, and forms geometry in latent 3D space.">
+<title>LLM Pipeline Explorer — Tokenizer, Vectors, Attention & 3D Latent Space</title>
+<meta name="description" content="Research-grade interactive laboratory demonstrating how text becomes tokens, turns into high-dimensional vectors, computes self-attention, and forms geometry in 3D latent space.">
 
-<!-- Plotly for high-performance 3D scatter plots -->
+<!-- Plotly for 3D scatter & latent projections -->
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
-<!-- Google Fonts: Inter & JetBrains Mono -->
+<!-- KaTeX for crisp mathematical formula rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+<!-- Google Fonts: Space Grotesk, Plus Jakarta Sans, JetBrains Mono -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
 <style>
   :root {
-    --bg-page: #090d16;
-    --bg-surface: #111726;
-    --bg-surface-elevated: #182238;
-    --bg-input: #0c1322;
+    --bg-page: #070a12;
+    --bg-surface: #0e1424;
+    --bg-surface-elevated: #151f36;
+    --bg-surface-subtle: #1c2947;
+    --bg-input: #090e1c;
     --border-subtle: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.16);
     --border-accent: #6366f1;
@@ -36,11 +42,16 @@
     --amber: #f59e0b;
     --amber-light: rgba(245, 158, 11, 0.15);
     --rose: #f43f5e;
+    --rose-light: rgba(244, 63, 94, 0.15);
+    --purple: #a855f7;
+    --purple-light: rgba(168, 85, 247, 0.15);
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 16px;
-    --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --shadow-card: 0 8px 32px -4px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.25);
+    --font-heading: 'Space Grotesk', system-ui, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -49,7 +60,8 @@
     --bg-page: #f8fafc;
     --bg-surface: #ffffff;
     --bg-surface-elevated: #f1f5f9;
-    --bg-input: #f8fafc;
+    --bg-surface-subtle: #e2e8f0;
+    --bg-input: #ffffff;
     --border-subtle: rgba(0, 0, 0, 0.08);
     --border-strong: rgba(0, 0, 0, 0.16);
     --border-accent: #4f46e5;
@@ -66,7 +78,11 @@
     --amber: #d97706;
     --amber-light: rgba(217, 119, 6, 0.1);
     --rose: #e11d48;
+    --rose-light: rgba(225, 29, 72, 0.1);
+    --purple: #9333ea;
+    --purple-light: rgba(147, 51, 234, 0.1);
     --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
+    --shadow-glow: 0 0 20px rgba(79, 70, 229, 0.15);
   }
 
   *, *::before, *::after {
@@ -87,8 +103,14 @@
   }
 
   .container {
-    max-width: 1240px;
+    max-width: 1280px;
     margin: 0 auto;
+  }
+
+  /* Typography */
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.025em;
   }
 
   /* Header & Navigation */
@@ -110,38 +132,39 @@
   .brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
   }
 
   .logo-icon {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: var(--radius-md);
     background: linear-gradient(135deg, var(--primary), var(--cyan));
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
+    font-family: var(--font-heading);
     font-weight: 700;
-    font-size: 18px;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    font-size: 19px;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
   }
 
   .brand-text h1 {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
-    letter-spacing: -0.02em;
     color: var(--text-primary);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
   .badge {
+    font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     padding: 2px 8px;
     border-radius: 9999px;
     background: var(--primary-light);
@@ -160,25 +183,25 @@
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
     border-radius: var(--radius-md);
-    padding: 8px 12px;
+    padding: 8px 14px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     transition: var(--transition);
   }
 
   .theme-toggle-btn:hover {
     border-color: var(--border-strong);
-    background: var(--bg-surface);
+    background: var(--bg-surface-subtle);
   }
 
   /* Pipeline Stepper */
   .pipeline-flow {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     gap: 12px;
     margin-bottom: 28px;
   }
@@ -200,8 +223,9 @@
 
   .flow-step:hover {
     border-color: var(--primary);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     background: var(--bg-surface-elevated);
+    box-shadow: var(--shadow-glow);
   }
 
   .step-num {
@@ -213,6 +237,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    font-family: var(--font-mono);
     font-size: 12px;
     font-weight: 700;
     color: var(--primary);
@@ -221,7 +246,7 @@
 
   .step-info .step-title {
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-primary);
   }
 
@@ -235,7 +260,7 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 12px 16px;
+    padding: 12px 18px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -246,11 +271,11 @@
 
   .preset-label {
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-secondary);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
 
   .preset-buttons {
@@ -264,8 +289,8 @@
     border: 1px solid var(--border-subtle);
     color: var(--text-primary);
     font-size: 12px;
-    font-weight: 500;
-    padding: 5px 12px;
+    font-weight: 600;
+    padding: 6px 14px;
     border-radius: 9999px;
     cursor: pointer;
     transition: var(--transition);
@@ -282,14 +307,14 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
-    padding: 24px;
-    margin-bottom: 28px;
+    padding: 26px;
+    margin-bottom: 30px;
     box-shadow: var(--shadow-card);
     transition: border-color 0.2s ease;
   }
 
   .section-card:hover {
-    border-color: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.25);
   }
 
   .section-header {
@@ -297,39 +322,38 @@
     justify-content: space-between;
     align-items: flex-start;
     flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 20px;
-    padding-bottom: 14px;
+    gap: 14px;
+    margin-bottom: 22px;
+    padding-bottom: 16px;
     border-bottom: 1px solid var(--border-subtle);
   }
 
   .section-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
   }
 
   .section-title h2 {
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 700;
     color: var(--text-primary);
-    letter-spacing: -0.01em;
   }
 
   .section-subtitle {
     font-size: 13px;
     color: var(--text-secondary);
-    margin-top: 2px;
+    margin-top: 3px;
   }
 
   /* Two column layout */
   .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
+    gap: 26px;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 960px) {
     .grid-2 {
       grid-template-columns: 1fr;
     }
@@ -344,7 +368,7 @@
     margin-bottom: 6px;
   }
 
-  textarea, input[type=text] {
+  textarea, input[type=text], select {
     width: 100%;
     box-sizing: border-box;
     font-family: var(--font-mono);
@@ -359,9 +383,9 @@
     line-height: 1.5;
   }
 
-  textarea:focus, input[type=text]:focus {
+  textarea:focus, input[type=text]:focus, select:focus {
     border-color: var(--border-accent);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
   }
 
   .btn {
@@ -386,7 +410,7 @@
   .btn-primary:hover {
     background: var(--primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
   }
 
   .btn-secondary {
@@ -397,7 +421,12 @@
 
   .btn-secondary:hover {
     border-color: var(--border-strong);
-    background: var(--bg-surface);
+    background: var(--bg-surface-subtle);
+  }
+
+  .btn-sm {
+    padding: 5px 12px;
+    font-size: 12px;
   }
 
   .button-group {
@@ -459,12 +488,12 @@
     background: var(--primary);
     cursor: pointer;
     margin-top: -6px;
-    box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
     transition: var(--transition);
   }
 
   input[type=range]::-webkit-slider-thumb:hover {
-    transform: scale(1.15);
+    transform: scale(1.2);
   }
 
   /* Token chips */
@@ -498,15 +527,15 @@
   }
 
   .token-chip:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
 
   .token-chip .chip-id {
     font-size: 10px;
     font-weight: 700;
-    opacity: 0.75;
-    background: rgba(0, 0, 0, 0.18);
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.2);
     padding: 1px 5px;
     border-radius: 4px;
   }
@@ -538,7 +567,7 @@
   .stat-card .stat-name {
     font-size: 11px;
     color: var(--text-secondary);
-    font-weight: 500;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -548,6 +577,7 @@
     font-weight: 700;
     color: var(--text-primary);
     font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     margin-top: 2px;
   }
 
@@ -566,6 +596,7 @@
     width: 100%;
     font-size: 12px;
     font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
 
   th, td {
@@ -584,7 +615,7 @@
   }
 
   tr:hover td {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.03);
   }
 
   .tag-badge {
@@ -606,7 +637,7 @@
     border-radius: var(--radius-md);
     overflow: hidden;
     background: var(--bg-input);
-    min-height: 520px;
+    min-height: 540px;
   }
 
   .plot-toolbar {
@@ -616,11 +647,28 @@
     z-index: 10;
     display: flex;
     gap: 6px;
-    background: rgba(17, 23, 38, 0.85);
-    backdrop-filter: blur(8px);
-    padding: 4px;
+    background: rgba(14, 20, 36, 0.85);
+    backdrop-filter: blur(10px);
+    padding: 4px 6px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-subtle);
+  }
+
+  /* HUD overlay on 3D canvas */
+  .plot-hud {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    z-index: 10;
+    background: rgba(14, 20, 36, 0.85);
+    backdrop-filter: blur(10px);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    max-width: 320px;
   }
 
   .tool-btn {
@@ -629,7 +677,7 @@
     color: var(--text-secondary);
     font-size: 11px;
     font-weight: 600;
-    padding: 4px 8px;
+    padding: 5px 10px;
     border-radius: 4px;
     cursor: pointer;
     transition: var(--transition);
@@ -686,7 +734,7 @@
     font-size: 11px;
     font-weight: 700;
     color: var(--emerald);
-    min-width: 42px;
+    min-width: 44px;
     text-align: right;
   }
 
@@ -695,19 +743,50 @@
     background: var(--bg-surface-elevated);
     border-left: 3px solid var(--primary);
     border-radius: 0 var(--radius-md) var(--radius-md) 0;
-    padding: 12px 16px;
-    margin: 14px 0;
-    font-size: 12px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13px;
     color: var(--text-secondary);
   }
 
   .callout-title {
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 2px;
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+  }
+
+  /* Attention Matrix Visualizer Grid */
+  .attention-grid {
+    display: grid;
+    gap: 2px;
+    margin-top: 10px;
+    background: var(--bg-input);
+    padding: 8px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+    overflow-x: auto;
+  }
+
+  .attn-cell {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+
+  .attn-cell:hover {
+    transform: scale(1.18);
+    z-index: 5;
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.8);
   }
 
   /* Footer */
@@ -729,9 +808,19 @@
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-md);
     padding: 14px;
-    width: 260px;
+    width: 270px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     backdrop-filter: blur(12px);
+  }
+
+  /* Formula display cards */
+  .formula-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    margin: 10px 0;
+    text-align: center;
   }
 </style>
 </head>
@@ -745,7 +834,7 @@
       <div class="brand">
         <div class="logo-icon">LLM</div>
         <div class="brand-text">
-          <h1>Pipeline Explorer <span class="badge">Interactive Lab</span></h1>
+          <h1>Pipeline Explorer <span class="badge">Research Lab</span></h1>
         </div>
       </div>
       <div class="header-actions">
@@ -760,28 +849,35 @@
       <a href="#section-tokenizer" class="flow-step">
         <div class="step-num">1</div>
         <div class="step-info">
-          <div class="step-title">Tokenizer &amp; Subwords</div>
-          <div class="step-desc">Text into discrete token IDs</div>
+          <div class="step-title">Tokenizer &amp; BPE</div>
+          <div class="step-desc">Text into discrete subwords</div>
         </div>
       </a>
-      <a href="#section-embeddings" class="flow-step">
+      <a href="#section-attention" class="flow-step">
         <div class="step-num">2</div>
         <div class="step-info">
-          <div class="step-title">High-Dim Embeddings</div>
-          <div class="step-desc">Tokens into 64-D vectors</div>
+          <div class="step-title">Self-Attention</div>
+          <div class="step-desc">Scaled dot-product weights</div>
         </div>
       </a>
       <a href="#section-embeddings" class="flow-step">
         <div class="step-num">3</div>
         <div class="step-info">
           <div class="step-title">3D Latent Space</div>
-          <div class="step-desc">PCA projection &amp; clusters</div>
+          <div class="step-desc">64-D vectors projected in 3D</div>
+        </div>
+      </a>
+      <a href="#section-arithmetic" class="flow-step">
+        <div class="step-num">4</div>
+        <div class="step-info">
+          <div class="step-title">Vector Algebra</div>
+          <div class="step-desc">Semantic arithmetic in 3D</div>
         </div>
       </a>
       <a href="#section-similarity" class="flow-step">
-        <div class="step-num">4</div>
+        <div class="step-num">5</div>
         <div class="step-info">
-          <div class="step-title">Cosine Similarity</div>
+          <div class="step-title">Cosine Matrix</div>
           <div class="step-desc">Latent geometry &amp; angles</div>
         </div>
       </a>
@@ -803,15 +899,15 @@
   </header>
 
   <!-- ===================================================================== -->
-  <!-- SECTION 1: TOKENIZER LAB -->
+  <!-- SECTION 1: TOKENIZER LAB & BPE MERGES -->
   <!-- ===================================================================== -->
   <section id="section-tokenizer" class="section-card">
     <div class="section-header">
       <div class="section-title">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
         <div>
-          <h2>1. Tokenizer &amp; Subword Decomposition</h2>
-          <div class="section-subtitle">How raw natural language is partitioned into a finite vocabulary of whole words, subwords, and tokens.</div>
+          <h2>1. Tokenizer, Subwords &amp; Byte-Pair Encoding (BPE)</h2>
+          <div class="section-subtitle">How natural language is partitioned into a finite vocabulary of whole words, subwords, and tokens.</div>
         </div>
       </div>
     </div>
@@ -830,7 +926,7 @@ I don't like the rain, but I like the sun.</textarea>
         <div class="button-group">
           <button id="build-vocab-btn" class="btn btn-primary">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-            Build Vocabulary
+            Train Vocabulary &amp; BPE
           </button>
         </div>
 
@@ -841,8 +937,11 @@ I don't like the rain, but I like the sun.</textarea>
             <span id="vocab-slider-value" class="slider-val-badge">All Words Kept</span>
           </div>
           <input type="range" id="vocab-slider" min="1" step="1">
-          <p class="section-subtitle" style="margin-top:8px;">Drag left to prune rare words. Dropped words are split into subword fragments (e.g. <code>##ing</code>, <code>##s</code>), mimicking BPE/WordPiece tokenizers.</p>
+          <p class="section-subtitle" style="margin-top:8px;">Drag left to prune rare words. Dropped words are split into subword fragments (e.g. <code>##ing</code>, <code>##s</code>), mimicking WordPiece/BPE tokenizers.</p>
         </div>
+
+        <!-- Top BPE Merge Operations -->
+        <div id="bpe-merges-box" style="margin-top:14px;"></div>
 
         <!-- Vocab output table -->
         <div id="vocab-output"></div>
@@ -867,14 +966,49 @@ I don't like the rain, but I like the sun.</textarea>
   </section>
 
   <!-- ===================================================================== -->
-  <!-- SECTION 2: 3D EMBEDDINGS & LATENT SPACE -->
+  <!-- SECTION 2: SELF-ATTENTION WEIGHT MATRIX -->
+  <!-- ===================================================================== -->
+  <section id="section-attention" class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <div>
+          <h2>2. Transformer Self-Attention Visualizer</h2>
+          <div class="section-subtitle">Real-time scaled dot-product attention weights calculated across active tokens.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Left: Attention Formula & Context -->
+      <div>
+        <div class="formula-card">
+          $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^T}{\sqrt{d_k}}\right) V$$
+        </div>
+        <p class="section-subtitle" style="margin-top:10px;">
+          Each token calculates its Query vector $Q$ against all other tokens' Key vectors $K$. 
+          The softmax normalizes dot products into a probability distribution summing to $1.0$ ($100\%$).
+        </p>
+        <div id="attn-token-inspector" style="margin-top:16px;"></div>
+      </div>
+
+      <!-- Right: Interactive Attention Matrix Grid -->
+      <div>
+        <label>Attention Weight Heatmap (Hover cells to inspect attention links)</label>
+        <div id="attention-grid-container" style="overflow-x:auto;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <!-- SECTION 3: 3D EMBEDDINGS & LATENT SPACE -->
   <!-- ===================================================================== -->
   <section id="section-embeddings" class="section-card">
     <div class="section-header">
       <div class="section-title">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
         <div>
-          <h2>2. High-Dimensional Embeddings &amp; 3D Latent Space</h2>
+          <h2>3. High-Dimensional Embeddings &amp; 3D Latent Space</h2>
           <div class="section-subtitle">Sentences mapped into 64-dimensional latent space and projected via Principal Component Analysis (PCA) to 3D.</div>
         </div>
       </div>
@@ -891,7 +1025,7 @@ I don't like the rain, but I like the sun.</textarea>
       <!-- Left: Corpus Editor & Actions -->
       <div>
         <label for="sentences">Corpus Sentences (One per line)</label>
-        <textarea id="sentences" rows="9">The cat sat on the mat.
+        <textarea id="sentences" rows="8">The cat sat on the mat.
 A kitten rested on the rug.
 The bat sat on the mat.
 I love programming in Python.
@@ -912,7 +1046,7 @@ Telescopes observe bright stars.</textarea>
         <div id="embed-status" style="margin-top:10px; font-size:12px; color:var(--rose);"></div>
 
         <!-- User Query Probe Card -->
-        <div style="margin-top:20px; padding:16px; background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+        <div style="margin-top:18px; padding:16px; background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <h3 style="font-size:14px; font-weight:700; color:var(--text-primary);">Probe Your Own Sentence</h3>
@@ -938,6 +1072,11 @@ Telescopes observe bright stars.</textarea>
             <button id="view-top-btn" class="tool-btn">Top (PC1-PC2)</button>
           </div>
           <div id="plot" style="width:100%; height:540px;"></div>
+          <!-- Live 3D HUD -->
+          <div id="plot-hud" class="plot-hud">
+            <div><strong style="color:var(--primary);">Active HUD:</strong> <span id="hud-status">Ready</span></div>
+            <div id="hud-point" style="margin-top:3px; font-size:10px; color:var(--text-tertiary);">Rotate or hover points to inspect</div>
+          </div>
         </div>
 
         <!-- Variance explained chips -->
@@ -947,15 +1086,66 @@ Telescopes observe bright stars.</textarea>
   </section>
 
   <!-- ===================================================================== -->
-  <!-- SECTION 3: COSINE SIMILARITY & VECTOR MATH -->
+  <!-- SECTION 4: LATENT VECTOR ARITHMETIC -->
+  <!-- ===================================================================== -->
+  <section id="section-arithmetic" class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="12" cy="12" r="10"/></svg>
+        <div>
+          <h2>4. Latent Vector Arithmetic ("Word Algebra")</h2>
+          <div class="section-subtitle">Perform linear algebraic operations in 64-D embedding space and project the resultant vector back into 3D.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Left: Equation Builder -->
+      <div>
+        <div class="formula-card">
+          $$\mathbf{v}_{\text{result}} = \frac{\mathbf{v}_A - \mathbf{v}_B + \mathbf{v}_C}{\|\mathbf{v}_A - \mathbf{v}_B + \mathbf{v}_C\|_2}$$
+        </div>
+
+        <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px; margin-top:14px;">
+          <div style="margin-bottom:12px;">
+            <label for="arithmetic-a" style="color:var(--primary);">Vector A (+)</label>
+            <select id="arithmetic-a"></select>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label for="arithmetic-b" style="color:var(--rose);">Vector B (-)</label>
+            <select id="arithmetic-b"></select>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label for="arithmetic-c" style="color:var(--cyan);">Vector C (+)</label>
+            <select id="arithmetic-c"></select>
+          </div>
+
+          <button id="calc-arithmetic-btn" class="btn btn-primary" style="width:100%;">
+            Compute &amp; Project Resultant Vector
+          </button>
+        </div>
+      </div>
+
+      <!-- Right: Result & Nearest Neighbor -->
+      <div>
+        <div id="arithmetic-result-box" style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px; min-height:240px;">
+          <h3 style="font-size:14px; color:var(--text-primary); margin-bottom:10px;">Arithmetic Prediction Output</h3>
+          <p class="section-subtitle">Select vectors and click Compute to predict the nearest semantic neighbor in latent space.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <!-- SECTION 5: COSINE SIMILARITY MATRIX & MATH -->
   <!-- ===================================================================== -->
   <section id="section-similarity" class="section-card">
     <div class="section-header">
       <div class="section-title">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
         <div>
-          <h2>3. Pairwise Cosine Similarity Matrix &amp; Vector Inspection</h2>
-          <div class="section-subtitle">Examine the mathematical dot products, angular distance, and embedding vectors between sentences.</div>
+          <h2>5. Pairwise Cosine Similarity Matrix &amp; Angular Distance</h2>
+          <div class="section-subtitle">Mathematical dot products and angular displacement between all corpus sentence vectors.</div>
         </div>
       </div>
     </div>
@@ -963,7 +1153,10 @@ Telescopes observe bright stars.</textarea>
     <div class="grid-2">
       <!-- Heatmap / Matrix container -->
       <div>
-        <label>Sentence Similarity Matrix (Cosine Dot Product: 0.0 → 1.0)</label>
+        <div class="formula-card">
+          $$\cos(\theta) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2}, \quad \theta = \arccos(\text{sim})$$
+        </div>
+        <label style="margin-top:14px;">Sentence Similarity Matrix (Cosine Dot Product: 0.0 → 1.0)</label>
         <div id="similarity-matrix-box" style="overflow-x:auto; margin-top:8px;"></div>
       </div>
 
@@ -973,11 +1166,11 @@ Telescopes observe bright stars.</textarea>
         <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:16px;">
           <div style="margin-bottom:12px;">
             <label for="probe-sentence-a" style="font-size:12px;">Sentence A</label>
-            <select id="probe-sentence-a" style="width:100%; padding:8px; border-radius:var(--radius-sm); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-subtle); font-family:var(--font-sans); font-size:12px;"></select>
+            <select id="probe-sentence-a" style="font-size:12px;"></select>
           </div>
           <div style="margin-bottom:14px;">
             <label for="probe-sentence-b" style="font-size:12px;">Sentence B</label>
-            <select id="probe-sentence-b" style="width:100%; padding:8px; border-radius:var(--radius-sm); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-subtle); font-family:var(--font-sans); font-size:12px;"></select>
+            <select id="probe-sentence-b" style="font-size:12px;"></select>
           </div>
           <div id="probe-results"></div>
         </div>
@@ -987,7 +1180,7 @@ Telescopes observe bright stars.</textarea>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
             Why Cosine Similarity Matters in Transformers
           </div>
-          In modern LLMs (GPT, LLaMA, Claude), the Self-Attention mechanism computes attention weights via scaled dot products: <code>Attention(Q, K, V) = softmax(Q Kᵀ / √dₖ) V</code>. Sentences or tokens that point in similar directions in latent space receive higher attention weights!
+          In modern LLMs, cosine similarity provides length-invariant semantic direction. Whether a prompt is brief or elaborate, dot products capture semantic alignment!
         </div>
       </div>
     </div>
@@ -995,7 +1188,7 @@ Telescopes observe bright stars.</textarea>
 
   <!-- Footer -->
   <footer>
-    <p>LLM Pipeline Explorer — Single-file educational laboratory for natural language processing.</p>
+    <p>LLM Pipeline Explorer — Single-file educational laboratory for natural language processing &amp; latent space geometry.</p>
   </footer>
 
 </div>
@@ -1018,7 +1211,7 @@ Telescopes observe bright stars.</textarea>
 // GLOBAL STATE & PRESETS
 // =====================================================================
 let currentTheme = "dark";
-let embeddingMode = "hybrid"; // "hybrid" or "trigram"
+let embeddingMode = "hybrid";
 let vocab = null;
 let sortedWords = [];
 let wordCounts = {};
@@ -1026,12 +1219,15 @@ let subwordPieces = [];
 let userText = null;
 let lastVectors = [];
 let lastSentences = [];
+let last3DPoints = [];
+let pcaComponents = [];
+let pcaMean = [];
+let arithmeticResult = null;
 let isSpinning = false;
 let spinTimer = null;
 
 const COMMON_ENDINGS = ["##s", "##es", "##ed", "##ing", "##er", "##est", "##ly", "##y", "##tion", "##able"];
 
-// Curated semantic concept anchors for LLM-style semantic embedding
 const SEMANTIC_CLUSTERS = {
   animals: ["cat", "kitten", "feline", "dog", "dogs", "puppy", "canine", "pet", "bat", "rug", "mat", "bird", "lion", "tiger", "snake", "snakes", "python", "pythons", "fish", "wildlife", "creature"],
   coding: ["code", "coding", "program", "programming", "python", "developer", "software", "computer", "script", "algorithm", "compiler", "debugging", "data", "bytes", "terminal", "passionate", "passion"],
@@ -1041,7 +1237,6 @@ const SEMANTIC_CLUSTERS = {
   sentiment: ["love", "liked", "like", "passion", "friend", "friends", "happy", "joy", "good", "great"]
 };
 
-// Corpora Presets
 const CORPUS_PRESETS = {
   multi: {
     corpus: `The cat sat on the mat.
@@ -1144,7 +1339,7 @@ function textColorForId(id) {
 }
 
 // =====================================================================
-// PART 1: TOKENIZER ENGINE
+// PART 1: TOKENIZER ENGINE & BPE SIMULATOR
 // =====================================================================
 function splitIntoWords(text) {
   let t = text.toLowerCase();
@@ -1161,10 +1356,8 @@ function buildVocabulary() {
     wordCounts[w] = (wordCounts[w] || 0) + 1;
   }
 
-  // Sort words descending by frequency
   sortedWords = Object.keys(wordCounts).sort((a, b) => wordCounts[b] - wordCounts[a]);
 
-  // Subword inventory: common endings + all unique alphanumeric characters
   const rawLetters = [...new Set(corpusText.toLowerCase().replace(/[^a-z0-9]/g, ""))].sort();
   subwordPieces = [
     ...COMMON_ENDINGS,
@@ -1172,13 +1365,44 @@ function buildVocabulary() {
     ...rawLetters.map(ch => "##" + ch)
   ];
 
-  // Configure slider
   const slider = document.getElementById("vocab-slider");
   slider.max = Math.max(1, sortedWords.length);
   slider.value = sortedWords.length;
   document.getElementById("vocab-slider-box").style.display = "block";
 
   applyVocabSize(sortedWords.length);
+  renderBPEMerges(words);
+}
+
+function renderBPEMerges(words) {
+  const pairCounts = {};
+  for (const word of words) {
+    for (let i = 0; i < word.length - 1; i++) {
+      const pair = `${word[i]} + ${word[i+1]}`;
+      pairCounts[pair] = (pairCounts[pair] || 0) + 1;
+    }
+  }
+
+  const topPairs = Object.entries(pairCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  let badges = "";
+  topPairs.forEach(([pair, count], idx) => {
+    badges += `<span class="tag-badge tag-subword" style="margin-right:6px; margin-bottom:4px;">
+      Step ${idx+1}: <code>${pair}</code> (${count}×)
+    </span>`;
+  });
+
+  const bpeBox = document.getElementById("bpe-merges-box");
+  if (bpeBox) {
+    bpeBox.innerHTML = `
+      <div style="font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">
+        Frequent BPE Character Merge Candidates:
+      </div>
+      <div>${badges || '<span style="color:var(--text-tertiary); font-size:11px;">Not enough corpus data</span>'}</div>
+    `;
+  }
 }
 
 function applyVocabSize(n) {
@@ -1249,7 +1473,6 @@ function splitIntoSubwords(word) {
       }
     }
     if (found === null) {
-      // Fallback: character lookup
       const charPiece = start > 0 ? ("##" + word[start]) : word[start];
       if (charPiece in vocab) {
         found = charPiece;
@@ -1308,7 +1531,6 @@ function tokenizeSentence() {
   const tokenCount = tokens.length;
   const ratio = tokenCount ? (charCount / tokenCount).toFixed(2) : "0";
   const subwordsCount = tokens.filter(t => t.isSubword || t.unknown).length;
-  const unkCount = tokens.filter(t => t.text === "[UNK]").length;
 
   const outputEl = document.getElementById("token-output");
   outputEl.innerHTML = `
@@ -1337,10 +1559,11 @@ function tokenizeSentence() {
     </div>
   `;
 
-  // Attach chip inspector handlers
   outputEl.querySelectorAll('.token-chip').forEach(chip => {
     chip.addEventListener('click', (e) => showChipInspector(e, chip));
   });
+
+  renderSelfAttention(tokens);
 }
 
 function showChipInspector(e, chip) {
@@ -1369,21 +1592,97 @@ document.addEventListener('click', (e) => {
 });
 
 // =====================================================================
-// PART 2: EMBEDDING ENGINE & MATHEMATICAL PROJECTION
+// PART 2: SELF-ATTENTION WEIGHT MATRIX
+// =====================================================================
+function renderSelfAttention(tokens) {
+  const container = document.getElementById("attention-grid-container");
+  const inspector = document.getElementById("attn-token-inspector");
+  if (!container || tokens.length === 0) return;
+
+  const n = Math.min(tokens.length, 12);
+  const subTokens = tokens.slice(0, n);
+  const tokenVecs = subTokens.map(t => computeVector(t.text));
+
+  // Compute scaled dot-product attention
+  const d_k = 64;
+  const sqrtD = Math.sqrt(d_k);
+  const scores = [];
+
+  for (let i = 0; i < n; i++) {
+    const rawScores = [];
+    for (let j = 0; j < n; j++) {
+      rawScores.push(dot(tokenVecs[i], tokenVecs[j]) / sqrtD);
+    }
+    // Softmax
+    const maxScore = Math.max(...rawScores);
+    const exps = rawScores.map(s => Math.exp(s - maxScore));
+    const sumExp = exps.reduce((a, b) => a + b, 0) || 1;
+    scores.push(exps.map(e => e / sumExp));
+  }
+
+  // Draw Heatmap Grid
+  let tableHtml = "<table><thead><tr><th>Q \\ K</th>";
+  subTokens.forEach((t, j) => {
+    tableHtml += `<th title="${escapeHtml(t.text)}">${escapeHtml(t.text.slice(0, 5))}</th>`;
+  });
+  tableHtml += "</tr></thead><tbody>";
+
+  for (let i = 0; i < n; i++) {
+    tableHtml += `<tr><td style="font-weight:700;">${escapeHtml(subTokens[i].text)}</td>`;
+    for (let j = 0; j < n; j++) {
+      const weight = scores[i][j];
+      const pct = (weight * 100).toFixed(1);
+      const intensity = Math.min(1, weight * 2.5);
+      const bg = currentTheme === 'dark' 
+        ? `rgba(168, 85, 247, ${intensity})` 
+        : `rgba(147, 51, 234, ${intensity * 0.7})`;
+
+      tableHtml += `<td class="attn-cell" style="background:${bg}; text-align:center;" 
+                        title="${escapeHtml(subTokens[i].text)} → ${escapeHtml(subTokens[j].text)}: ${pct}%"
+                        onmouseenter="highlightAttention(${i}, ${j}, ${weight}, '${escapeHtml(subTokens[i].text)}', '${escapeHtml(subTokens[j].text)}')">
+                      ${weight.toFixed(2)}
+                    </td>`;
+    }
+    tableHtml += "</tr>";
+  }
+  tableHtml += "</tbody></table>";
+
+  container.innerHTML = `<div class="table-box">${tableHtml}</div>`;
+
+  inspector.innerHTML = `
+    <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:14px;">
+      <span style="font-size:12px; font-weight:600; color:var(--text-secondary);">Attention Link Details:</span>
+      <div id="attn-detail-text" style="font-size:13px; font-weight:700; color:var(--purple); margin-top:4px;">Hover any cell in the heatmap</div>
+    </div>
+  `;
+}
+
+function highlightAttention(i, j, weight, tokenA, tokenB) {
+  const detailEl = document.getElementById("attn-detail-text");
+  if (!detailEl) return;
+  const pct = (weight * 100).toFixed(1);
+  detailEl.innerHTML = `
+    Query <code>${tokenA}</code> attends to Key <code>${tokenB}</code>: <span style="color:var(--emerald);">${pct}%</span>
+    <div class="sim-bar-wrapper" style="margin-top:6px;">
+      <div class="sim-track"><div class="sim-fill" style="width:${pct}%; background:var(--purple);"></div></div>
+    </div>
+  `;
+}
+
+// =====================================================================
+// PART 3: EMBEDDING ENGINE & PCA PROJECTION
 // =====================================================================
 function computeVector(sentence) {
   const d = 64;
   const v = new Array(d).fill(0);
   const s = sentence.toLowerCase();
 
-  // Character trigram hashing (lexical component)
   for (let i = 0; i + 3 <= s.length; i++) {
     const trigram = s.slice(i, i + 3);
     const bucket = hashString(trigram) % d;
     v[bucket] += 1;
   }
 
-  // If in hybrid semantic mode, blend concept cluster embeddings
   if (embeddingMode === "hybrid") {
     const words = splitIntoWords(sentence);
     Object.keys(SEMANTIC_CLUSTERS).forEach((clusterKey, cIdx) => {
@@ -1393,7 +1692,6 @@ function computeVector(sentence) {
         if (clusterWords.includes(w)) clusterHits += 1;
       }
       if (clusterHits > 0) {
-        // Boost a dedicated subspace in the 64-D vector for this semantic domain
         const baseOffset = (cIdx * 9) % d;
         for (let k = 0; k < 8; k++) {
           const idx = (baseOffset + k) % d;
@@ -1411,14 +1709,12 @@ function pcaTo3D(vectors) {
   const d = vectors[0].length;
   if (n < 3) return vectors.map(() => [0, 0, 0]);
 
-  // Center the data (subtract mean)
-  const mean = new Array(d).fill(0);
+  pcaMean = new Array(d).fill(0);
   for (const v of vectors) {
-    for (let j = 0; j < d; j++) mean[j] += v[j] / n;
+    for (let j = 0; j < d; j++) pcaMean[j] += v[j] / n;
   }
-  const X = vectors.map(v => v.map((x, j) => x - mean[j]));
+  const X = vectors.map(v => v.map((x, j) => x - pcaMean[j]));
 
-  // Compute Covariance Matrix C (d x d)
   const C = [];
   let totalVariance = 0;
   for (let a = 0; a < d; a++) {
@@ -1430,8 +1726,7 @@ function pcaTo3D(vectors) {
     totalVariance += C[a][a];
   }
 
-  // Extract top 3 eigenvectors using power iteration with Gram-Schmidt deflation
-  const components = [];
+  pcaComponents = [];
   const eigenvalues = [];
 
   for (let k = 0; k < 3; k++) {
@@ -1440,10 +1735,9 @@ function pcaTo3D(vectors) {
       v = normalize(C.map(row => dot(row, v)));
     }
     const lambda = dot(v, C.map(row => dot(row, v)));
-    components.push(v);
+    pcaComponents.push(v);
     eigenvalues.push(Math.max(0, lambda));
 
-    // Deflation
     for (let a = 0; a < d; a++) {
       for (let b = 0; b < d; b++) {
         C[a][b] -= lambda * v[a] * v[b];
@@ -1451,7 +1745,6 @@ function pcaTo3D(vectors) {
     }
   }
 
-  // Render explained variance stats
   const varBox = document.getElementById("pca-variance-stats");
   if (varBox && totalVariance > 0) {
     const p1 = ((eigenvalues[0] / totalVariance) * 100).toFixed(1);
@@ -1470,31 +1763,30 @@ function pcaTo3D(vectors) {
     `;
   }
 
-  // Project data points onto 3 components
-  return X.map(x => components.map(c => dot(x, c)));
+  last3DPoints = X.map(x => pcaComponents.map(c => dot(x, c)));
+  return last3DPoints;
 }
 
 // =====================================================================
-// PART 3: 3D SCATTER PLOT (PLOTLY)
+// PART 4: 3D SCATTER PLOT (PLOTLY)
 // =====================================================================
 function drawPlot(points, sentences) {
   const isDark = currentTheme === "dark";
-  const bgCol = isDark ? "#0c1322" : "#ffffff";
+  const bgCol = isDark ? "#090e1c" : "#ffffff";
   const gridCol = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
   const textCol = isDark ? "#94a3b8" : "#475569";
 
-  // Assign color categories based on clustering
   const colors = sentences.map(s => {
-    if (s === userText) return "#f59e0b"; // vibrant amber for user query
+    if (s === userText) return "#ff7a00";
     const lower = s.toLowerCase();
     if (lower.includes("cat") || lower.includes("dog") || lower.includes("kitten") || lower.includes("bat") || lower.includes("feline")) return "#06b6d4";
-    if (lower.includes("python") || lower.includes("program") || lower.includes("coding") || lower.includes("software")) return "#8b5cf6";
+    if (lower.includes("python") || lower.includes("program") || lower.includes("coding") || lower.includes("software")) return "#818cf8";
     if (lower.includes("market") || lower.includes("stock") || lower.includes("share") || lower.includes("price")) return "#10b981";
     if (lower.includes("star") || lower.includes("galaxy") || lower.includes("telescope") || lower.includes("astronaut")) return "#f43f5e";
     return "#3b82f6";
   });
 
-  const sizes = sentences.map(s => (s === userText ? 12 : 7));
+  const sizes = sentences.map(s => (s === userText ? 13 : 7));
 
   const tracePoints = {
     type: "scatter3d",
@@ -1507,7 +1799,7 @@ function drawPlot(points, sentences) {
     hoverinfo: "text",
     textposition: "top center",
     textfont: {
-      family: "Inter, sans-serif",
+      family: "Plus Jakarta Sans, sans-serif",
       size: 11,
       color: textCol
     },
@@ -1516,7 +1808,7 @@ function drawPlot(points, sentences) {
       color: colors,
       opacity: 0.9,
       line: {
-        color: isDark ? "#1e293b" : "#ffffff",
+        color: isDark ? "#151f36" : "#ffffff",
         width: 1.5
       }
     }
@@ -1524,7 +1816,7 @@ function drawPlot(points, sentences) {
 
   const data = [tracePoints];
 
-  // If user has a query point, draw an accented vector line from user point to its nearest neighbor!
+  // User vector connection line to nearest neighbor
   if (userText && sentences.includes(userText)) {
     const userIdx = sentences.indexOf(userText);
     const userVec = lastVectors[userIdx];
@@ -1546,7 +1838,7 @@ function drawPlot(points, sentences) {
         y: [points[userIdx][1], points[bestIdx][1]],
         z: [points[userIdx][2], points[bestIdx][2]],
         line: {
-          color: "#f59e0b",
+          color: "#ff7a00",
           width: 4,
           dash: "dot"
         },
@@ -1554,6 +1846,27 @@ function drawPlot(points, sentences) {
         showlegend: false
       });
     }
+  }
+
+  // Latent Arithmetic resultant point projection
+  if (arithmeticResult) {
+    data.push({
+      type: "scatter3d",
+      mode: "markers+text",
+      x: [arithmeticResult.coords[0]],
+      y: [arithmeticResult.coords[1]],
+      z: [arithmeticResult.coords[2]],
+      text: ["Result: " + arithmeticResult.label],
+      hovertext: ["Arithmetic Result Vector"],
+      hoverinfo: "text",
+      textposition: "bottom center",
+      marker: {
+        size: 14,
+        color: "#a855f7",
+        symbol: "diamond",
+        line: { color: "#ffffff", width: 2 }
+      }
+    });
   }
 
   const layout = {
@@ -1594,10 +1907,115 @@ function drawPlot(points, sentences) {
   };
 
   Plotly.newPlot("plot", data, layout, config);
+
+  // Hook hover events to update HUD
+  const plotEl = document.getElementById("plot");
+  plotEl.on('plotly_hover', function(eventData) {
+    if (eventData.points && eventData.points.length > 0) {
+      const p = eventData.points[0];
+      const text = p.hovertext || p.text;
+      document.getElementById("hud-status").textContent = "Inspecting Node";
+      document.getElementById("hud-point").innerHTML = `
+        <strong>${escapeHtml(text)}</strong><br>
+        (x: ${p.x.toFixed(2)}, y: ${p.y.toFixed(2)}, z: ${p.z.toFixed(2)})
+      `;
+    }
+  });
+
+  plotEl.on('plotly_unhover', function() {
+    document.getElementById("hud-status").textContent = "Active";
+    document.getElementById("hud-point").textContent = "Rotate or hover points to inspect";
+  });
 }
 
 // =====================================================================
-// PART 4: SIMILARITY MATRIX & NEAREST NEIGHBORS
+// PART 5: LATENT VECTOR ARITHMETIC
+// =====================================================================
+function setupArithmeticSelectors(sentences) {
+  const selA = document.getElementById("arithmetic-a");
+  const selB = document.getElementById("arithmetic-b");
+  const selC = document.getElementById("arithmetic-c");
+  if (!selA || !selB || !selC) return;
+
+  selA.innerHTML = "";
+  selB.innerHTML = "";
+  selC.innerHTML = "";
+
+  sentences.forEach((s, idx) => {
+    const text = s.length > 38 ? s.slice(0, 38) + "…" : s;
+    selA.appendChild(new Option(`[S${idx+1}] ${text}`, idx));
+    selB.appendChild(new Option(`[S${idx+1}] ${text}`, idx));
+    selC.appendChild(new Option(`[S${idx+1}] ${text}`, idx));
+  });
+
+  if (sentences.length >= 3) {
+    selA.value = "0";
+    selB.value = "1";
+    selC.value = "2";
+  }
+}
+
+function computeArithmetic() {
+  const idxA = parseInt(document.getElementById("arithmetic-a").value, 10);
+  const idxB = parseInt(document.getElementById("arithmetic-b").value, 10);
+  const idxC = parseInt(document.getElementById("arithmetic-c").value, 10);
+
+  if (lastVectors.length < 3) return;
+
+  const vA = lastVectors[idxA];
+  const vB = lastVectors[idxB];
+  const vC = lastVectors[idxC];
+  const d = vA.length;
+
+  const vResult = new Array(d).fill(0);
+  for (let i = 0; i < d; i++) {
+    vResult[i] = vA[i] - vB[i] + vC[i];
+  }
+  const normalizedResult = normalize(vResult);
+
+  // Find closest sentence in corpus
+  let bestIdx = -1, bestScore = -Infinity;
+  for (let i = 0; i < lastVectors.length; i++) {
+    const sc = similarity(normalizedResult, lastVectors[i]);
+    if (sc > bestScore) {
+      bestScore = sc;
+      bestIdx = i;
+    }
+  }
+
+  // Project onto 3D PCA
+  const centered = normalizedResult.map((x, j) => x - pcaMean[j]);
+  const coords3D = pcaComponents.map(c => dot(centered, c));
+
+  arithmeticResult = {
+    coords: coords3D,
+    label: `A - B + C`,
+    nearest: lastSentences[bestIdx],
+    score: bestScore
+  };
+
+  const pct = Math.round(Math.max(0, bestScore) * 100);
+
+  document.getElementById("arithmetic-result-box").innerHTML = `
+    <h3 style="font-size:14px; color:var(--text-primary); margin-bottom:10px;">Predicted Nearest Semantic Target</h3>
+    <div style="background:var(--bg-input); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:12px; margin-bottom:12px;">
+      <div style="font-size:11px; color:var(--text-secondary); text-transform:uppercase; font-weight:700;">Nearest Sentence:</div>
+      <div style="font-size:14px; font-weight:700; color:var(--purple); margin:4px 0;">${escapeHtml(lastSentences[bestIdx])}</div>
+      <div class="sim-bar-wrapper">
+        <div class="sim-track"><div class="sim-fill" style="width:${pct}%; background:var(--purple);"></div></div>
+        <span class="sim-value" style="color:var(--purple);">${bestScore.toFixed(3)}</span>
+      </div>
+    </div>
+    <div style="font-size:12px; color:var(--text-secondary);">
+      The resultant vector has been projected as a <strong style="color:var(--purple);">Purple Diamond</strong> in the 3D Latent Space above!
+    </div>
+  `;
+
+  drawPlot(last3DPoints, lastSentences);
+}
+
+// =====================================================================
+// PART 6: SIMILARITY MATRIX & NEAREST NEIGHBORS
 // =====================================================================
 function renderSimilarityMatrix(vectors, sentences) {
   const container = document.getElementById("similarity-matrix-box");
@@ -1741,7 +2159,6 @@ function calculateProbe() {
   const angleDeg = (angleRad * (180 / Math.PI)).toFixed(1);
   const pct = Math.round(Math.max(0, score) * 100);
 
-  // Render vector sparklines
   const renderSparkline = (vec) => {
     let cells = "";
     for (const val of vec) {
@@ -1777,7 +2194,7 @@ function calculateProbe() {
 }
 
 // =====================================================================
-// PART 5: EMBED & PLOT ORCHESTRATOR
+// PART 7: ORCHESTRATOR
 // =====================================================================
 async function embedAndPlot() {
   const status = document.getElementById("embed-status");
@@ -1802,15 +2219,13 @@ async function embedAndPlot() {
   showClosestPairs(vectors, sentences);
   renderSimilarityMatrix(vectors, sentences);
   updateProbeSelectors(sentences);
+  setupArithmeticSelectors(sentences);
 
   if (userText && sentences.includes(userText)) {
     showUserWordDetails(vectors, sentences);
   }
 }
 
-// =====================================================================
-// PART 6: PROBE USER TEXT
-// =====================================================================
 async function addUserWord() {
   const text = document.getElementById("new-word").value.trim();
   if (!text) return;
@@ -1884,7 +2299,7 @@ function showUserWordDetails(vectors, sentences) {
 }
 
 // =====================================================================
-// PART 7: 3D VIEWPORT CONTROLS
+// PART 8: 3D VIEWPORT CONTROLS
 // =====================================================================
 function toggleAutoSpin() {
   isSpinning = !isSpinning;
@@ -1924,7 +2339,7 @@ function topDownView() {
 }
 
 // =====================================================================
-// PART 8: EVENT LISTENERS & INITIALIZATION
+// PART 9: EVENT LISTENERS & INITIALIZATION
 // =====================================================================
 document.getElementById("build-vocab-btn").addEventListener("click", () => {
   buildVocabulary();
@@ -1958,6 +2373,8 @@ document.getElementById("new-word").addEventListener("keydown", e => {
   if (e.key === "Enter") addUserWord();
 });
 
+document.getElementById("calc-arithmetic-btn").addEventListener("click", computeArithmetic);
+
 document.getElementById("toggle-spin-btn").addEventListener("click", toggleAutoSpin);
 document.getElementById("reset-cam-btn").addEventListener("click", resetCamera);
 document.getElementById("view-top-btn").addEventListener("click", topDownView);
@@ -1974,7 +2391,7 @@ document.getElementById("theme-btn").addEventListener("click", () => {
 
   if (vocab) tokenizeSentence();
   if (lastVectors.length > 0) {
-    drawPlot(pcaTo3D(lastVectors), lastSentences);
+    drawPlot(last3DPoints, lastSentences);
     renderSimilarityMatrix(lastVectors, lastSentences);
     calculateProbe();
   }
@@ -2014,6 +2431,14 @@ document.querySelectorAll(".preset-btn[data-preset]").forEach(btn => {
 
 // Initial boot
 window.addEventListener("DOMContentLoaded", () => {
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ]
+    });
+  }
   buildVocabulary();
   tokenizeSentence();
   embedAndPlot();
