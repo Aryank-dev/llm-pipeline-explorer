@@ -3,102 +3,96 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LLM Pipeline Explorer — Tokenizer, Vectors, Attention & 3D Latent Space</title>
-<meta name="description" content="Research-grade interactive laboratory demonstrating how text becomes tokens, turns into high-dimensional vectors, computes self-attention, and forms geometry in 3D latent space.">
+<title>LLM Pipeline Explorer</title>
+<meta name="description" content="An interactive tool showing how text decomposes into subword tokens, turns into vectors, computes self-attention, and forms geometry in 3D latent space.">
 
 <!-- Plotly for 3D scatter & latent projections -->
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 
-<!-- KaTeX for crisp mathematical formula rendering -->
+<!-- KaTeX for mathematical formula rendering -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
-<!-- Google Fonts: Space Grotesk, Plus Jakarta Sans, JetBrains Mono -->
+<!-- Typography: Inter & JetBrains Mono -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
   :root {
     /* -------------------------------------------------------------
-       DARK THEME: Archetype D (High-Craft Dark Studio)
-       60% Neutral Zinc Canvas + 30% Elevated Surface + 10% Precision Accent
+       UNSLOP GRAPHITE RAMP (Dark Theme)
+       Quiet chrome, neutral surfaces, deliberate accent
        ------------------------------------------------------------- */
-    --bg-page: #09090b;             /* zinc-950 */
-    --bg-surface: #121215;          /* zinc-900 elevated */
-    --bg-surface-elevated: #18181b; /* zinc-850 cards */
-    --bg-surface-subtle: #27272a;   /* zinc-800 interactive */
-    --bg-input: #0e0e11;            /* deep input recess */
+    --bg-page: #141415;
+    --bg-surface: #19191b;
+    --bg-surface-elevated: #232325;
+    --bg-surface-subtle: #2b2b2e;
+    --bg-input: #101011;
     --border-subtle: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.16);
-    --border-accent: #3b82f6;
-    --text-primary: #f4f4f5;        /* zinc-100 (contrast > 15:1) */
-    --text-secondary: #a1a1aa;      /* zinc-400 */
-    --text-tertiary: #71717a;       /* zinc-500 */
-    
-    --primary: #3b82f6;             /* Precision Cobalt / Electric Blue */
-    --primary-hover: #2563eb;
-    --primary-light: rgba(59, 130, 246, 0.12);
-    --primary-contrast: #ffffff;
+    --border-focus: #ededed;
+    --text-primary: #ededed;
+    --text-secondary: #a1a1a6;
+    --text-muted: #85858b;
 
-    --accent-emerald: #10b981;
-    --accent-emerald-light: rgba(16, 185, 129, 0.12);
-    --accent-amber: #f59e0b;
-    --accent-amber-light: rgba(245, 158, 11, 0.12);
-    --accent-rose: #f43f5e;
-    --accent-rose-light: rgba(244, 63, 94, 0.12);
-    --accent-purple: #a855f7;
-    --accent-purple-light: rgba(168, 85, 247, 0.12);
-    --accent-cyan: #06b6d4;
-    --accent-cyan-light: rgba(6, 182, 212, 0.12);
+    /* Primary button on dark: off-white from ramp with dark text */
+    --btn-primary-bg: #ededed;
+    --btn-primary-text: #141415;
+    --btn-primary-hover: #ffffff;
 
-    --radius-sm: 6px;
-    --radius-md: 10px;
+    /* Single deliberate accent for selections & focus */
+    --accent: #3b82f6;
+    --accent-light: rgba(59, 130, 246, 0.14);
+
+    /* Semantic indicators (calibrated & toned down) */
+    --semantic-positive: #4cc38a;
+    --semantic-negative: #e5484d;
+    --semantic-amber: #f59e0b;
+    --semantic-purple: #a855f7;
+    --semantic-cyan: #06b6d4;
+
+    /* Proportions & Radii (nested: inner = outer - padding) */
+    --radius-sm: 4px;
+    --radius-md: 8px;
     --radius-lg: 14px;
-    --shadow-card: 0 4px 24px -2px rgba(0, 0, 0, 0.6);
-    --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.2);
-    --font-heading: 'Space Grotesk', system-ui, sans-serif;
-    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   [data-theme="light"] {
     /* -------------------------------------------------------------
-       LIGHT THEME: Archetype B & C (Swiss Editorial & Enterprise Trust)
-       60% Alabaster Canvas + 30% Pure White Card + 10% Ink Black Authority
+       UNSLOP GRAPHITE RAMP (Light Theme)
+       Pure neutrals, calm reading surface, ink typography
        ------------------------------------------------------------- */
-    --bg-page: #fafafa;             /* neutral-50 */
-    --bg-surface: #ffffff;          /* pure white container */
-    --bg-surface-elevated: #f4f4f5; /* zinc-100 section */
-    --bg-surface-subtle: #e4e4e7;   /* zinc-200 */
-    --bg-input: #ffffff;            /* crisp white input */
-    --border-subtle: rgba(0, 0, 0, 0.07);
-    --border-strong: rgba(0, 0, 0, 0.15);
-    --border-accent: #09090b;
-    --text-primary: #09090b;        /* zinc-950 (contrast > 18:1) */
-    --text-secondary: #52525b;      /* zinc-600 */
-    --text-tertiary: #71717a;       /* zinc-500 */
+    --bg-page: #fafafa;
+    --bg-surface: #ffffff;
+    --bg-surface-elevated: #f4f4f5;
+    --bg-surface-subtle: #eaeaea;
+    --bg-input: #ffffff;
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-strong: rgba(0, 0, 0, 0.16);
+    --border-focus: #171717;
+    --text-primary: #171717;
+    --text-secondary: #525252;
+    --text-muted: #737373;
 
-    --primary: #09090b;             /* Ink Black Authority */
-    --primary-hover: #27272a;
-    --primary-light: rgba(9, 9, 11, 0.08);
-    --primary-contrast: #ffffff;
+    /* Primary button on light: dark fill from ramp with white text */
+    --btn-primary-bg: #171717;
+    --btn-primary-text: #ffffff;
+    --btn-primary-hover: #262626;
 
-    --accent-emerald: #059669;
-    --accent-emerald-light: rgba(5, 150, 105, 0.1);
-    --accent-amber: #d97706;
-    --accent-amber-light: rgba(217, 119, 6, 0.1);
-    --accent-rose: #e11d48;
-    --accent-rose-light: rgba(225, 29, 72, 0.1);
-    --accent-purple: #7e22ce;
-    --accent-purple-light: rgba(126, 34, 206, 0.1);
-    --accent-cyan: #0284c7;
-    --accent-cyan-light: rgba(2, 132, 199, 0.1);
+    --accent: #2563eb;
+    --accent-light: rgba(37, 99, 235, 0.1);
 
-    --shadow-card: 0 2px 14px -2px rgba(0, 0, 0, 0.05);
-    --shadow-glow: 0 0 16px rgba(9, 9, 11, 0.08);
+    --semantic-positive: #16a34a;
+    --semantic-negative: #dc2626;
+    --semantic-amber: #d97706;
+    --semantic-purple: #7e22ce;
+    --semantic-cyan: #0284c7;
   }
 
   *, *::before, *::after {
@@ -111,27 +105,43 @@
     font-family: var(--font-sans);
     background-color: var(--bg-page);
     color: var(--text-primary);
-    line-height: 1.6;
+    line-height: 1.5;
     min-height: 100vh;
-    padding: 24px 16px 80px;
+    padding: 24px 20px 80px;
     -webkit-font-smoothing: antialiased;
-    transition: background-color 0.25s ease, color 0.25s ease;
+    font-size: 14px;
+    transition: background-color 140ms var(--ease-standard), color 140ms var(--ease-standard);
   }
 
   .container {
-    max-width: 1280px;
+    max-width: 1240px;
     margin: 0 auto;
   }
 
-  /* Typography */
-  h1, h2, h3, h4 {
-    font-family: var(--font-heading);
-    letter-spacing: -0.025em;
+  /* Typography scale per Unslop specifications */
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  h2 {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
   }
 
   /* Header & Navigation */
   header {
-    margin-bottom: 28px;
+    margin-bottom: 24px;
   }
 
   .top-nav {
@@ -140,53 +150,47 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
-    padding-bottom: 20px;
+    padding-bottom: 16px;
     border-bottom: 1px solid var(--border-subtle);
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
   .brand {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
   }
 
-  .logo-icon {
-    width: 38px;
-    height: 38px;
+  .logo-mark {
+    width: 32px;
+    height: 32px;
     border-radius: var(--radius-md);
     background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-strong);
+    border: 1px solid var(--border-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text-primary);
     font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 15px;
-    letter-spacing: -0.05em;
+    font-size: 13px;
+    font-weight: 600;
   }
 
   .brand-text h1 {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text-primary);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
-  .badge {
+  .badge-tag {
     font-family: var(--font-mono);
     font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 2px 8px;
-    border-radius: 9999px;
-    background: var(--primary-light);
-    color: var(--primary);
-    border: 1px solid var(--border-strong);
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
   }
 
   .header-actions {
@@ -195,97 +199,95 @@
     gap: 12px;
   }
 
-  .theme-toggle-btn {
-    background: var(--bg-surface-elevated);
+  .theme-btn {
+    background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
+    color: var(--text-secondary);
     border-radius: var(--radius-md);
-    padding: 8px 14px;
+    padding: 6px 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 13px;
-    font-weight: 600;
-    transition: var(--transition);
+    font-weight: 500;
+    transition: background 140ms var(--ease-standard), border-color 140ms var(--ease-standard), color 140ms var(--ease-standard);
   }
 
-  .theme-toggle-btn:hover {
+  .theme-btn:hover {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
     border-color: var(--border-strong);
-    background: var(--bg-surface-subtle);
   }
 
-  .theme-svg-icon {
-    width: 15px;
-    height: 15px;
+  .theme-icon {
+    width: 14px;
+    height: 14px;
     stroke: currentColor;
-    stroke-width: 1.75;
+    stroke-width: 1.5;
     fill: none;
   }
 
-  /* Pipeline Stepper */
+  /* Pipeline Navigation Stepper */
   .pipeline-flow {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 12px;
-    margin-bottom: 28px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+    margin-bottom: 24px;
   }
 
   .flow-step {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 14px 16px;
-    position: relative;
+    padding: 10px 14px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     cursor: pointer;
-    transition: var(--transition);
+    transition: background 140ms var(--ease-standard), border-color 140ms var(--ease-standard);
     text-decoration: none;
     color: inherit;
   }
 
   .flow-step:hover {
-    border-color: var(--border-strong);
-    transform: translateY(-2px);
     background: var(--bg-surface-elevated);
-    box-shadow: var(--shadow-glow);
+    border-color: var(--border-strong);
   }
 
   .step-num {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-strong);
+    border: 1px solid var(--border-subtle);
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
     flex-shrink: 0;
   }
 
-  .step-info .step-title {
+  .step-title {
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--text-primary);
   }
 
-  .step-info .step-desc {
+  .step-desc {
     font-size: 11px;
-    color: var(--text-secondary);
+    color: var(--text-muted);
   }
 
-  /* Preset Selector Strip */
+  /* Preset Selection Strip */
   .preset-strip {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 12px 18px;
+    padding: 10px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -296,50 +298,50 @@
 
   .preset-label {
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 500;
     color: var(--text-secondary);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   .preset-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
 
   .preset-btn {
     background: var(--bg-surface-elevated);
     border: 1px solid var(--border-subtle);
-    color: var(--text-primary);
+    color: var(--text-secondary);
     font-size: 12px;
-    font-weight: 600;
-    padding: 6px 14px;
-    border-radius: 9999px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: var(--transition);
+    transition: background 140ms var(--ease-standard), color 140ms var(--ease-standard), border-color 140ms var(--ease-standard);
   }
 
-  .preset-btn:hover, .preset-btn.active {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: var(--primary-contrast);
+  .preset-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
   }
 
-  /* Main Grid Cards */
+  .preset-btn.active {
+    background: var(--bg-page);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+
+  /* Main Section Cards */
   .section-card {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
-    padding: 26px;
-    margin-bottom: 28px;
-    box-shadow: var(--shadow-card);
-    transition: border-color 0.2s ease;
-  }
-
-  .section-card:hover {
-    border-color: var(--border-strong);
+    padding: 24px;
+    margin-bottom: 24px;
   }
 
   .section-header {
@@ -347,48 +349,42 @@
     justify-content: space-between;
     align-items: flex-start;
     flex-wrap: wrap;
-    gap: 14px;
-    margin-bottom: 22px;
-    padding-bottom: 16px;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
     border-bottom: 1px solid var(--border-subtle);
   }
 
   .section-title {
     display: flex;
     align-items: center;
-    gap: 12px;
-  }
-
-  .section-title h2 {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
+    gap: 10px;
   }
 
   .section-subtitle {
     font-size: 13px;
     color: var(--text-secondary);
-    margin-top: 3px;
+    margin-top: 2px;
   }
 
   /* Two column layout */
   .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 26px;
+    gap: 24px;
   }
 
-  @media (max-width: 960px) {
+  @media (max-width: 900px) {
     .grid-2 {
       grid-template-columns: 1fr;
     }
   }
 
-  /* Form controls */
+  /* Form Controls & Inputs */
   label {
     display: block;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-secondary);
     margin-bottom: 6px;
   }
@@ -400,47 +396,50 @@
     font-size: 13px;
     background: var(--bg-input);
     color: var(--text-primary);
-    padding: 10px 14px;
+    padding: 10px 12px;
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     outline: none;
-    transition: var(--transition);
     line-height: 1.5;
+    transition: border-color 140ms var(--ease-standard);
   }
 
   textarea:focus, input[type=text]:focus, select:focus {
-    border-color: var(--border-accent);
-    box-shadow: 0 0 0 3px var(--primary-light);
+    border-color: var(--border-focus);
   }
 
+  /* Buttons */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 9px 18px;
+    padding: 8px 16px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     border-radius: var(--radius-md);
-    border: none;
+    border: 1px solid transparent;
     cursor: pointer;
-    transition: var(--transition);
+    transition: background 140ms var(--ease-standard), border-color 140ms var(--ease-standard), transform 120ms var(--ease-standard);
+  }
+
+  .btn:active {
+    transform: scale(0.98);
   }
 
   .btn-primary {
-    background: var(--primary);
-    color: var(--primary-contrast);
+    background: var(--btn-primary-bg);
+    color: var(--btn-primary-text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
 
   .btn-primary:hover {
-    background: var(--primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    background: var(--btn-primary-hover);
   }
 
   .btn-secondary {
     background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-subtle);
+    border-color: var(--border-subtle);
     color: var(--text-primary);
   }
 
@@ -456,12 +455,12 @@
     flex-wrap: wrap;
   }
 
-  /* Slider control box */
+  /* Sliders */
   .slider-card {
     background: var(--bg-surface-elevated);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 14px 16px;
+    padding: 12px 14px;
     margin: 16px 0;
   }
 
@@ -472,14 +471,13 @@
     margin-bottom: 8px;
   }
 
-  .slider-val-badge {
+  .slider-badge {
     font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-primary);
-    background: var(--bg-surface-subtle);
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
-    padding: 2px 8px;
+    padding: 2px 6px;
     border-radius: var(--radius-sm);
   }
 
@@ -496,39 +494,38 @@
 
   input[type=range]::-webkit-slider-runnable-track {
     width: 100%;
-    height: 6px;
+    height: 4px;
     background: var(--border-strong);
     border-radius: 9999px;
   }
 
   input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    height: 18px;
-    width: 18px;
+    height: 16px;
+    width: 16px;
     border-radius: 50%;
-    background: var(--primary);
+    background: var(--text-primary);
     cursor: pointer;
     margin-top: -6px;
     border: 2px solid var(--bg-surface);
-    box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
-    transition: var(--transition);
+    transition: transform 120ms var(--ease-standard);
   }
 
   input[type=range]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
+    transform: scale(1.15);
   }
 
-  /* Token chips */
+  /* Token Chips */
   .chips-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin: 14px 0;
-    padding: 14px;
+    gap: 6px;
+    margin: 12px 0;
+    padding: 12px;
     background: var(--bg-input);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    min-height: 60px;
+    min-height: 56px;
     align-items: center;
   }
 
@@ -536,85 +533,76 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: var(--radius-sm);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     background: var(--bg-surface-elevated);
     color: var(--text-primary);
     border: 1px solid var(--border-subtle);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    transition: var(--transition);
+    transition: background 120ms var(--ease-standard), border-color 120ms var(--ease-standard);
     user-select: none;
   }
 
   .token-chip:hover {
-    transform: translateY(-2px);
-    border-color: var(--border-strong);
     background: var(--bg-surface-subtle);
+    border-color: var(--border-strong);
   }
 
   .token-chip .chip-id {
     font-size: 10px;
-    font-weight: 700;
-    opacity: 0.8;
-    background: var(--bg-surface-subtle);
-    border: 1px solid var(--border-subtle);
-    padding: 1px 5px;
-    border-radius: 4px;
+    color: var(--text-muted);
+    font-weight: 600;
   }
 
   .token-chip.subword-chip {
-    border-left: 3px solid var(--accent-cyan);
+    border-left: 2px solid var(--semantic-cyan);
   }
 
   .token-chip.unk-chip {
-    background: var(--accent-rose-light) !important;
-    border-color: var(--accent-rose) !important;
-    color: var(--accent-rose) !important;
+    border-color: var(--semantic-negative);
+    color: var(--semantic-negative);
   }
 
-  /* Stat cards */
+  /* Stat Figures */
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 10px;
-    margin-top: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
   }
 
   .stat-card {
     background: var(--bg-surface-elevated);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 10px 14px;
+    padding: 10px 12px;
   }
 
   .stat-card .stat-name {
     font-size: 11px;
-    color: var(--text-secondary);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    font-weight: 500;
   }
 
   .stat-card .stat-value {
     font-size: 18px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-primary);
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     margin-top: 2px;
   }
 
-  /* Table styling */
+  /* Tables */
   .table-box {
-    max-height: 280px;
+    max-height: 260px;
     overflow-y: auto;
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    margin-top: 12px;
+    margin-top: 10px;
     background: var(--bg-input);
   }
 
@@ -628,14 +616,14 @@
 
   th, td {
     border-bottom: 1px solid var(--border-subtle);
-    padding: 8px 12px;
+    padding: 6px 10px;
     text-align: left;
   }
 
   th {
     background: var(--bg-surface-elevated);
-    color: var(--text-secondary);
-    font-weight: 600;
+    color: var(--text-muted);
+    font-weight: 500;
     position: sticky;
     top: 0;
     z-index: 2;
@@ -645,56 +633,27 @@
     background: var(--bg-surface-elevated);
   }
 
-  .tag-badge {
-    display: inline-block;
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 600;
-    border: 1px solid var(--border-subtle);
-  }
-
-  .tag-word { background: var(--bg-surface-subtle); color: var(--text-primary); }
-  .tag-subword { background: var(--accent-cyan-light); color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.2); }
-  .tag-special { background: var(--accent-amber-light); color: var(--accent-amber); border-color: rgba(245, 158, 11, 0.2); }
-
-  /* 3D Plot Controls and Canvas */
+  /* 3D Plot Container */
   .plot-wrapper {
     position: relative;
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     overflow: hidden;
     background: var(--bg-input);
-    min-height: 540px;
+    min-height: 520px;
   }
 
   .plot-toolbar {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 10px;
+    right: 10px;
     z-index: 10;
     display: flex;
-    gap: 6px;
+    gap: 4px;
     background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-strong);
-    padding: 4px 6px;
+    border: 1px solid var(--border-subtle);
+    padding: 3px 5px;
     border-radius: var(--radius-sm);
-  }
-
-  /* HUD overlay on 3D canvas */
-  .plot-hud {
-    position: absolute;
-    bottom: 12px;
-    left: 12px;
-    z-index: 10;
-    background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-strong);
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    font-size: 11px;
-    color: var(--text-secondary);
-    font-family: var(--font-mono);
-    max-width: 320px;
   }
 
   .tool-btn {
@@ -702,38 +661,48 @@
     border: none;
     color: var(--text-secondary);
     font-size: 11px;
-    font-weight: 600;
-    padding: 5px 10px;
-    border-radius: 4px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 3px;
     cursor: pointer;
-    transition: var(--transition);
+    transition: background 120ms var(--ease-standard), color 120ms var(--ease-standard);
   }
 
   .tool-btn:hover, .tool-btn.active {
-    background: var(--primary);
-    color: var(--primary-contrast);
+    background: var(--bg-page);
+    color: var(--text-primary);
+  }
+
+  .plot-hud {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 10;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    max-width: 300px;
   }
 
   /* Vector Visualizer Bar */
   .vector-strip {
     display: flex;
-    height: 18px;
+    height: 14px;
     border-radius: var(--radius-sm);
     overflow: hidden;
     border: 1px solid var(--border-subtle);
-    margin: 8px 0;
+    margin: 6px 0;
   }
 
   .vector-cell {
     flex: 1;
-    transition: opacity 0.15s ease;
   }
 
-  .vector-cell:hover {
-    opacity: 0.7;
-  }
-
-  /* Cosine Similarity Bars */
+  /* Similarity Bar */
   .sim-bar-wrapper {
     display: flex;
     align-items: center;
@@ -743,7 +712,7 @@
 
   .sim-track {
     flex: 1;
-    height: 6px;
+    height: 4px;
     background: var(--bg-surface-subtle);
     border-radius: 9999px;
     overflow: hidden;
@@ -751,91 +720,50 @@
 
   .sim-fill {
     height: 100%;
-    background: var(--accent-emerald);
+    background: var(--text-primary);
     border-radius: 9999px;
   }
 
   .sim-value {
     font-family: var(--font-mono);
     font-size: 11px;
-    font-weight: 700;
-    color: var(--accent-emerald);
-    min-width: 44px;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 40px;
     text-align: right;
   }
 
-  /* Callout helper */
+  /* Callout box */
   .callout {
     background: var(--bg-surface-elevated);
-    border-left: 3px solid var(--border-strong);
+    border-left: 2px solid var(--border-strong);
     border-radius: 0 var(--radius-md) var(--radius-md) 0;
-    padding: 14px 18px;
+    padding: 12px 14px;
     margin: 16px 0;
     font-size: 13px;
     color: var(--text-secondary);
   }
 
   .callout-title {
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 4px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
-  /* Attention Matrix Visualizer Grid */
-  .attention-grid {
-    display: grid;
-    gap: 2px;
-    margin-top: 10px;
-    background: var(--bg-input);
-    padding: 8px;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-subtle);
-    overflow-x: auto;
-  }
-
+  /* Attention Grid */
   .attn-cell {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-mono);
     font-size: 10px;
-    border-radius: 3px;
+    border-radius: 2px;
     cursor: pointer;
-    transition: transform 0.15s ease;
-  }
-
-  .attn-cell:hover {
-    transform: scale(1.18);
-    z-index: 5;
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
-  }
-
-  /* Footer */
-  footer {
-    margin-top: 48px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border-subtle);
-    text-align: center;
-    font-size: 12px;
-    color: var(--text-tertiary);
-  }
-
-  /* Chip Modal / Popover */
-  #chip-inspector {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    background: var(--bg-surface-elevated);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    padding: 14px;
-    width: 270px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
   }
 
   /* Formula display cards */
@@ -843,9 +771,32 @@
     background: var(--bg-input);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
-    padding: 12px 16px;
+    padding: 10px 14px;
     margin: 10px 0;
     text-align: center;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Chip popover */
+  #chip-inspector {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    width: 260px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
   }
 </style>
 </head>
@@ -857,14 +808,14 @@
   <header>
     <div class="top-nav">
       <div class="brand">
-        <div class="logo-icon">LLM</div>
+        <div class="logo-mark">LLM</div>
         <div class="brand-text">
-          <h1>Pipeline Explorer <span class="badge">Research Lab</span></h1>
+          <h1>Pipeline Explorer <span class="badge-tag">Laboratory</span></h1>
         </div>
       </div>
       <div class="header-actions">
-        <button id="theme-btn" class="theme-toggle-btn" aria-label="Toggle color theme">
-          <svg id="theme-icon" class="theme-svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <button id="theme-btn" class="theme-btn" aria-label="Toggle theme">
+          <svg id="theme-icon" class="theme-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           <span id="theme-text">Light Mode</span>
         </button>
       </div>
@@ -874,37 +825,37 @@
     <div class="pipeline-flow">
       <a href="#section-tokenizer" class="flow-step">
         <div class="step-num">1</div>
-        <div class="step-info">
+        <div>
           <div class="step-title">Tokenizer &amp; BPE</div>
           <div class="step-desc">Text into discrete subwords</div>
         </div>
       </a>
       <a href="#section-attention" class="flow-step">
         <div class="step-num">2</div>
-        <div class="step-info">
+        <div>
           <div class="step-title">Self-Attention</div>
-          <div class="step-desc">Scaled dot-product weights</div>
+          <div class="step-desc">Dot-product weight matrix</div>
         </div>
       </a>
       <a href="#section-embeddings" class="flow-step">
         <div class="step-num">3</div>
-        <div class="step-info">
+        <div>
           <div class="step-title">3D Latent Space</div>
           <div class="step-desc">64-D vectors projected in 3D</div>
         </div>
       </a>
       <a href="#section-arithmetic" class="flow-step">
         <div class="step-num">4</div>
-        <div class="step-info">
+        <div>
           <div class="step-title">Vector Algebra</div>
-          <div class="step-desc">Semantic arithmetic in 3D</div>
+          <div class="step-desc">Linear semantic operations</div>
         </div>
       </a>
       <a href="#section-similarity" class="flow-step">
         <div class="step-num">5</div>
-        <div class="step-info">
+        <div>
           <div class="step-title">Cosine Matrix</div>
-          <div class="step-desc">Latent geometry &amp; angles</div>
+          <div class="step-desc">Pairwise geometric distances</div>
         </div>
       </a>
     </div>
@@ -912,7 +863,7 @@
     <!-- Corpus Preset Quick Select -->
     <div class="preset-strip">
       <div class="preset-label">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         Corpus Presets:
       </div>
       <div class="preset-buttons">
@@ -930,28 +881,28 @@
   <section id="section-tokenizer" class="section-card">
     <div class="section-header">
       <div class="section-title">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>
         <div>
-          <h2>1. Tokenizer, Subwords &amp; Byte-Pair Encoding (BPE)</h2>
-          <div class="section-subtitle">How natural language is partitioned into a finite vocabulary of whole words, subwords, and tokens.</div>
+          <h2>1. Tokenizer, Subwords &amp; Byte-Pair Encoding</h2>
+          <div class="section-subtitle">How natural language is partitioned into a finite vocabulary of words, subwords, and tokens.</div>
         </div>
       </div>
     </div>
 
     <div class="grid-2">
-      <!-- Left Column: Corpus & Vocab Builder -->
+      <!-- Left Column: Training Corpus -->
       <div>
-        <label for="corpus">Training Corpus (Sentences to build vocabulary)</label>
+        <label for="corpus">Training corpus (Sentences to build vocabulary)</label>
         <textarea id="corpus" rows="7">The cat sat on the mat.
 The dog sat on the rug.
-The cat saw the dog!
+The cat saw the dog.
 A dog and a cat can be friends.
 Do you like the cat?
-I don't like the rain, but I like the sun.</textarea>
+I do not like the rain, but I like the sun.</textarea>
         
         <div class="button-group">
           <button id="build-vocab-btn" class="btn btn-primary">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
             Train Vocabulary &amp; BPE
           </button>
         </div>
@@ -959,34 +910,31 @@ I don't like the rain, but I like the sun.</textarea>
         <!-- Vocab size retention slider -->
         <div id="vocab-slider-box" class="slider-card" style="display:none;">
           <div class="slider-header">
-            <label for="vocab-slider" style="margin-bottom:0;">Vocabulary Retention:</label>
-            <span id="vocab-slider-value" class="slider-val-badge">All Words Kept</span>
+            <label for="vocab-slider" style="margin-bottom:0;">Vocabulary retention</label>
+            <span id="vocab-slider-value" class="slider-badge">All words kept</span>
           </div>
           <input type="range" id="vocab-slider" min="1" step="1">
-          <p class="section-subtitle" style="margin-top:8px;">Drag left to prune rare words. Dropped words are split into subword fragments (e.g. <code>##ing</code>, <code>##s</code>), mimicking WordPiece/BPE tokenizers.</p>
+          <p class="section-subtitle" style="margin-top:6px;">Dropped words split into subword fragments (e.g. <code>##ing</code>, <code>##s</code>), matching WordPiece and BPE behavior.</p>
         </div>
 
         <!-- Top BPE Merge Operations -->
-        <div id="bpe-merges-box" style="margin-top:14px;"></div>
+        <div id="bpe-merges-box" style="margin-top:12px;"></div>
 
         <!-- Vocab output table -->
         <div id="vocab-output"></div>
       </div>
 
-      <!-- Right Column: Interactive Tokenizer Sandbox -->
+      <!-- Right Column: Live Tokenizer -->
       <div>
-        <label for="encode-input">Live Sentence Tokenizer (Try typing!)</label>
+        <label for="encode-input">Sentence tokenizer</label>
         <textarea id="encode-input" rows="3">The dogs liked the sunny zebra.</textarea>
         
         <div class="button-group">
-          <button id="tokenize-btn" class="btn btn-secondary">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Tokenize
-          </button>
-          <button id="quick-sample-btn" class="btn btn-secondary">Load Sample</button>
+          <button id="tokenize-btn" class="btn btn-secondary">Tokenize</button>
+          <button id="quick-sample-btn" class="btn btn-secondary">Load sample</button>
         </div>
 
-        <div id="token-output" style="margin-top:14px;"></div>
+        <div id="token-output" style="margin-top:12px;"></div>
       </div>
     </div>
   </section>
@@ -997,10 +945,10 @@ I don't like the rain, but I like the sun.</textarea>
   <section id="section-attention" class="section-card">
     <div class="section-header">
       <div class="section-title">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         <div>
           <h2>2. Transformer Self-Attention Visualizer</h2>
-          <div class="section-subtitle">Real-time scaled dot-product attention weights calculated across active tokens.</div>
+          <div class="section-subtitle">Real-time scaled dot-product attention weights across active sequence tokens.</div>
         </div>
       </div>
     </div>
@@ -1011,16 +959,16 @@ I don't like the rain, but I like the sun.</textarea>
         <div class="formula-card">
           $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{Q K^T}{\sqrt{d_k}}\right) V$$
         </div>
-        <p class="section-subtitle" style="margin-top:10px;">
-          Each token calculates its Query vector $Q$ against all other tokens' Key vectors $K$. 
-          The softmax normalizes dot products into a probability distribution summing to $1.0$ ($100\%$).
+        <p class="section-subtitle" style="margin-top:8px;">
+          Each token computes its Query vector $Q$ against all Key vectors $K$. 
+          The softmax normalizes dot products into a probability distribution summing to 1.0.
         </p>
-        <div id="attn-token-inspector" style="margin-top:16px;"></div>
+        <div id="attn-token-inspector" style="margin-top:14px;"></div>
       </div>
 
       <!-- Right: Interactive Attention Matrix Grid -->
       <div>
-        <label>Attention Weight Heatmap (Hover cells to inspect attention links)</label>
+        <label>Attention weight heatmap (Hover cells to inspect attention links)</label>
         <div id="attention-grid-container" style="overflow-x:auto;"></div>
       </div>
     </div>
@@ -1032,25 +980,25 @@ I don't like the rain, but I like the sun.</textarea>
   <section id="section-embeddings" class="section-card">
     <div class="section-header">
       <div class="section-title">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
         <div>
           <h2>3. High-Dimensional Embeddings &amp; 3D Latent Space</h2>
-          <div class="section-subtitle">Sentences mapped into 64-dimensional latent space and projected via Principal Component Analysis (PCA) to 3D.</div>
+          <div class="section-subtitle">Sentences mapped into 64-D latent space and projected via Principal Component Analysis (PCA) to 3D.</div>
         </div>
       </div>
 
       <!-- Embedding Mode Selection -->
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:12px; color:var(--text-secondary); font-weight:600;">Embedding Engine:</span>
-        <button id="mode-hybrid-btn" class="preset-btn active" title="Curated concept semantics + subwords">Semantic (LLM-style)</button>
-        <button id="mode-trigram-btn" class="preset-btn" title="Pure character trigram hashing">Lexical (Trigrams)</button>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:12px; color:var(--text-muted);">Mode:</span>
+        <button id="mode-hybrid-btn" class="preset-btn active">Semantic</button>
+        <button id="mode-trigram-btn" class="preset-btn">Lexical</button>
       </div>
     </div>
 
     <div class="grid-2">
       <!-- Left: Corpus Editor & Actions -->
       <div>
-        <label for="sentences">Corpus Sentences (One per line)</label>
+        <label for="sentences">Corpus sentences (One per line)</label>
         <textarea id="sentences" rows="8">The cat sat on the mat.
 A kitten rested on the rug.
 The bat sat on the mat.
@@ -1064,20 +1012,20 @@ Telescopes observe bright stars.</textarea>
 
         <div class="button-group">
           <button id="embed-btn" class="btn btn-primary">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
             Compute &amp; Plot 3D Latent Space
           </button>
         </div>
 
-        <div id="embed-status" style="margin-top:10px; font-size:12px; color:var(--accent-rose);"></div>
+        <div id="embed-status" style="margin-top:8px; font-size:12px; color:var(--semantic-negative);"></div>
 
         <!-- User Query Probe Card -->
-        <div style="margin-top:18px; padding:16px; background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <h3 style="font-size:14px; font-weight:700; color:var(--text-primary);">Probe Your Own Sentence</h3>
+        <div style="margin-top:16px; padding:14px; background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <h3 style="font-size:13px; color:var(--text-primary);">Probe custom sentence</h3>
           </div>
-          <p class="section-subtitle" style="margin-bottom:10px;">Project any custom sentence into the latent geometry to see where it lands.</p>
+          <p class="section-subtitle" style="margin-bottom:8px;">Project any custom text into the latent geometry to locate its cluster.</p>
           <div style="display:flex; gap:8px;">
             <input type="text" id="new-word" placeholder="e.g. My puppy loves running in the grass">
             <button id="add-word-btn" class="btn btn-primary" style="flex-shrink:0;">Trace</button>
@@ -1086,27 +1034,27 @@ Telescopes observe bright stars.</textarea>
         </div>
 
         <!-- Closest pairs summary -->
-        <div id="pairs-output" style="margin-top:18px;"></div>
+        <div id="pairs-output" style="margin-top:16px;"></div>
       </div>
 
       <!-- Right: Interactive 3D Scatter Plot -->
       <div>
         <div class="plot-wrapper">
           <div class="plot-toolbar">
-            <button id="toggle-spin-btn" class="tool-btn">Auto-Rotate</button>
-            <button id="reset-cam-btn" class="tool-btn">Reset View</button>
+            <button id="toggle-spin-btn" class="tool-btn">Auto-rotate</button>
+            <button id="reset-cam-btn" class="tool-btn">Reset view</button>
             <button id="view-top-btn" class="tool-btn">Top (PC1-PC2)</button>
           </div>
-          <div id="plot" style="width:100%; height:540px;"></div>
+          <div id="plot" style="width:100%; height:520px;"></div>
           <!-- Live 3D HUD -->
           <div id="plot-hud" class="plot-hud">
-            <div><strong style="color:var(--text-primary);">Active HUD:</strong> <span id="hud-status">Ready</span></div>
-            <div id="hud-point" style="margin-top:3px; font-size:10px; color:var(--text-tertiary);">Rotate or hover points to inspect</div>
+            <div><span style="color:var(--text-muted);">Status:</span> <span id="hud-status" style="color:var(--text-primary);">Ready</span></div>
+            <div id="hud-point" style="margin-top:2px; font-size:10px; color:var(--text-muted);">Rotate or hover points to inspect</div>
           </div>
         </div>
 
         <!-- Variance explained chips -->
-        <div id="pca-variance-stats" style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;"></div>
+        <div id="pca-variance-stats" style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;"></div>
       </div>
     </div>
   </section>
@@ -1117,10 +1065,10 @@ Telescopes observe bright stars.</textarea>
   <section id="section-arithmetic" class="section-card">
     <div class="section-header">
       <div class="section-title">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="12" cy="12" r="10"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/><circle cx="12" cy="12" r="10"/></svg>
         <div>
-          <h2>4. Latent Vector Arithmetic ("Word Algebra")</h2>
-          <div class="section-subtitle">Perform linear algebraic operations in 64-D embedding space and project the resultant vector back into 3D.</div>
+          <h2>4. Latent Vector Arithmetic</h2>
+          <div class="section-subtitle">Perform linear algebraic operations in 64-D embedding space and project the result to 3D.</div>
         </div>
       </div>
     </div>
@@ -1132,16 +1080,16 @@ Telescopes observe bright stars.</textarea>
           $$\mathbf{v}_{\text{result}} = \frac{\mathbf{v}_A - \mathbf{v}_B + \mathbf{v}_C}{\|\mathbf{v}_A - \mathbf{v}_B + \mathbf{v}_C\|_2}$$
         </div>
 
-        <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px; margin-top:14px;">
-          <div style="margin-bottom:12px;">
+        <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:16px; margin-top:12px;">
+          <div style="margin-bottom:10px;">
             <label for="arithmetic-a">Vector A (+)</label>
             <select id="arithmetic-a"></select>
           </div>
-          <div style="margin-bottom:12px;">
+          <div style="margin-bottom:10px;">
             <label for="arithmetic-b">Vector B (-)</label>
             <select id="arithmetic-b"></select>
           </div>
-          <div style="margin-bottom:16px;">
+          <div style="margin-bottom:14px;">
             <label for="arithmetic-c">Vector C (+)</label>
             <select id="arithmetic-c"></select>
           </div>
@@ -1154,9 +1102,9 @@ Telescopes observe bright stars.</textarea>
 
       <!-- Right: Result & Nearest Neighbor -->
       <div>
-        <div id="arithmetic-result-box" style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px; min-height:240px;">
-          <h3 style="font-size:14px; color:var(--text-primary); margin-bottom:10px;">Arithmetic Prediction Output</h3>
-          <p class="section-subtitle">Select vectors and click Compute to predict the nearest semantic neighbor in latent space.</p>
+        <div id="arithmetic-result-box" style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:16px; min-height:220px;">
+          <h3 style="font-size:13px; color:var(--text-primary); margin-bottom:8px;">Arithmetic prediction output</h3>
+          <p class="section-subtitle">Select vectors and compute to identify the nearest semantic neighbor in latent space.</p>
         </div>
       </div>
     </div>
@@ -1168,10 +1116,10 @@ Telescopes observe bright stars.</textarea>
   <section id="section-similarity" class="section-card">
     <div class="section-header">
       <div class="section-title">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
         <div>
           <h2>5. Pairwise Cosine Similarity Matrix &amp; Angular Distance</h2>
-          <div class="section-subtitle">Mathematical dot products and angular displacement between all corpus sentence vectors.</div>
+          <div class="section-subtitle">Mathematical dot products and angular displacement across all corpus sentence vectors.</div>
         </div>
       </div>
     </div>
@@ -1182,31 +1130,31 @@ Telescopes observe bright stars.</textarea>
         <div class="formula-card">
           $$\cos(\theta) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2}, \quad \theta = \arccos(\text{sim})$$
         </div>
-        <label style="margin-top:14px;">Sentence Similarity Matrix (Cosine Dot Product: 0.0 → 1.0)</label>
+        <label style="margin-top:12px;">Sentence similarity matrix (0.0 to 1.0)</label>
         <div id="similarity-matrix-box" style="overflow-x:auto; margin-top:8px;"></div>
       </div>
 
       <!-- Vector Inspector & Distance Calculator -->
       <div>
-        <label>Semantic Distance Probe</label>
-        <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:16px;">
-          <div style="margin-bottom:12px;">
+        <label>Semantic distance probe</label>
+        <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:14px;">
+          <div style="margin-bottom:10px;">
             <label for="probe-sentence-a" style="font-size:12px;">Sentence A</label>
             <select id="probe-sentence-a" style="font-size:12px;"></select>
           </div>
-          <div style="margin-bottom:14px;">
+          <div style="margin-bottom:12px;">
             <label for="probe-sentence-b" style="font-size:12px;">Sentence B</label>
             <select id="probe-sentence-b" style="font-size:12px;"></select>
           </div>
           <div id="probe-results"></div>
         </div>
 
-        <div class="callout" style="margin-top:16px;">
+        <div class="callout" style="margin-top:14px;">
           <div class="callout-title">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            Why Cosine Similarity Matters in Transformers
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            Why cosine similarity matters in transformers
           </div>
-          In modern LLMs, cosine similarity provides length-invariant semantic direction. Whether a prompt is brief or elaborate, dot products capture semantic alignment!
+          In modern LLMs, cosine similarity provides length-invariant semantic direction. Regardless of prompt length, normalized dot products measure true directional alignment.
         </div>
       </div>
     </div>
@@ -1214,7 +1162,7 @@ Telescopes observe bright stars.</textarea>
 
   <!-- Footer -->
   <footer>
-    <p>LLM Pipeline Explorer — Single-file educational laboratory for natural language processing &amp; latent space geometry.</p>
+    <p>LLM Pipeline Explorer — Single-file laboratory for natural language processing &amp; latent geometry.</p>
   </footer>
 
 </div>
@@ -1222,13 +1170,13 @@ Telescopes observe bright stars.</textarea>
 <!-- Popover Chip Inspector -->
 <div id="chip-inspector">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-    <strong id="ci-text" style="font-family:var(--font-mono); font-size:14px; color:var(--text-primary);">token</strong>
-    <span id="ci-type" class="tag-badge tag-word">Word</span>
+    <strong id="ci-text" style="font-family:var(--font-mono); font-size:13px; color:var(--text-primary);">token</strong>
+    <span id="ci-type" class="badge-tag">Word</span>
   </div>
   <div style="font-size:12px; color:var(--text-secondary); line-height:1.6;">
-    <div>ID: <span id="ci-id" style="font-family:var(--font-mono); font-weight:700; color:var(--text-primary);">0</span></div>
-    <div>Corpus Frequency: <span id="ci-freq" style="font-family:var(--font-mono);">0</span></div>
-    <div>UTF-8 Length: <span id="ci-bytes" style="font-family:var(--font-mono);">0 bytes</span></div>
+    <div>ID: <span id="ci-id" style="font-family:var(--font-mono); font-weight:600; color:var(--text-primary);">0</span></div>
+    <div>Corpus frequency: <span id="ci-freq" style="font-family:var(--font-mono);">0</span></div>
+    <div>UTF-8 length: <span id="ci-bytes" style="font-family:var(--font-mono);">0 bytes</span></div>
   </div>
 </div>
 
@@ -1267,10 +1215,10 @@ const CORPUS_PRESETS = {
   multi: {
     corpus: `The cat sat on the mat.
 The dog sat on the rug.
-The cat saw the dog!
+The cat saw the dog.
 A dog and a cat can be friends.
 Do you like the cat?
-I don't like the rain, but I like the sun.`,
+I do not like the rain, but I like the sun.`,
     sentences: `The cat sat on the mat.
 A kitten rested on the rug.
 The bat sat on the mat.
@@ -1404,7 +1352,7 @@ function renderBPEMerges(words) {
 
   let badges = "";
   topPairs.forEach(([pair, count], idx) => {
-    badges += `<span class="tag-badge tag-subword" style="margin-right:6px; margin-bottom:4px;">
+    badges += `<span class="badge-tag" style="margin-right:6px; margin-bottom:4px;">
       Step ${idx+1}: <code>${pair}</code> (${count}×)
     </span>`;
   });
@@ -1412,10 +1360,10 @@ function renderBPEMerges(words) {
   const bpeBox = document.getElementById("bpe-merges-box");
   if (bpeBox) {
     bpeBox.innerHTML = `
-      <div style="font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">
-        Frequent BPE Character Merge Candidates:
+      <div style="font-size:12px; font-weight:500; color:var(--text-secondary); margin-bottom:6px;">
+        Frequent BPE character merge candidates:
       </div>
-      <div>${badges || '<span style="color:var(--text-tertiary); font-size:11px;">Not enough corpus data</span>'}</div>
+      <div>${badges || '<span style="color:var(--text-muted); font-size:11px;">Not enough corpus data</span>'}</div>
     `;
   }
 }
@@ -1426,18 +1374,18 @@ function applyVocabSize(n) {
 
   vocab = { "[UNK]": 0 };
   let rows = `<tr>
-    <td><span style="color:var(--accent-amber); font-weight:700;">0</span></td>
-    <td><span class="tag-badge tag-special">[UNK]</span></td>
-    <td><span class="tag-badge tag-special">special</span></td>
+    <td><span style="color:var(--semantic-amber); font-weight:600;">0</span></td>
+    <td><span class="badge-tag">[UNK]</span></td>
+    <td><span class="badge-tag">special</span></td>
     <td>-</td>
   </tr>`;
 
   kept.forEach(w => {
     vocab[w] = Object.keys(vocab).length;
     rows += `<tr>
-      <td><span style="font-weight:700;">${vocab[w]}</span></td>
+      <td><span style="font-weight:600;">${vocab[w]}</span></td>
       <td><strong>${escapeHtml(w)}</strong></td>
-      <td><span class="tag-badge tag-word">word</span></td>
+      <td><span class="badge-tag">word</span></td>
       <td>${wordCounts[w]}</td>
     </tr>`;
   });
@@ -1447,15 +1395,15 @@ function applyVocabSize(n) {
     vocab[p] = Object.keys(vocab).length;
     rows += `<tr>
       <td>${vocab[p]}</td>
-      <td><span style="color:var(--accent-cyan);">${escapeHtml(p)}</span></td>
-      <td><span class="tag-badge tag-subword">subword</span></td>
+      <td><span style="color:var(--semantic-cyan);">${escapeHtml(p)}</span></td>
+      <td><span class="badge-tag">subword</span></td>
       <td>-</td>
     </tr>`;
   });
 
   document.getElementById("vocab-output").innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
-      <span class="section-subtitle">Total Vocab Size: <strong style="color:var(--text-primary);">${Object.keys(vocab).length} tokens</strong></span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+      <span class="section-subtitle">Total vocab size: <strong style="color:var(--text-primary);">${Object.keys(vocab).length} tokens</strong></span>
       <span class="section-subtitle">${kept.length} words + ${Object.keys(vocab).length - kept.length - 1} subwords</span>
     </div>
     <div class="table-box">
@@ -1465,7 +1413,7 @@ function applyVocabSize(n) {
             <th>ID</th>
             <th>Token</th>
             <th>Type</th>
-            <th>Corpus Freq</th>
+            <th>Corpus frequency</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -1532,7 +1480,7 @@ function renderChips(tokens) {
                 <span class="chip-id">${t.id}</span>
              </div>`;
   }
-  return `<div class="chips-container">${html || '<span style="color:var(--text-tertiary); font-size:12px;">No tokens generated</span>'}</div>`;
+  return `<div class="chips-container">${html || '<span style="color:var(--text-muted); font-size:12px;">No tokens generated</span>'}</div>`;
 }
 
 function tokenizeSentence() {
@@ -1548,8 +1496,8 @@ function tokenizeSentence() {
   const outputEl = document.getElementById("token-output");
   outputEl.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center;">
-      <label style="margin-bottom:0;">Tokenized Sequence</label>
-      <span style="font-size:11px; color:var(--text-tertiary);">Click any token chip to inspect</span>
+      <label style="margin-bottom:0;">Tokenized sequence</label>
+      <span style="font-size:11px; color:var(--text-muted);">Click chip to inspect</span>
     </div>
     ${renderChips(tokens)}
     <div class="stats-grid">
@@ -1563,11 +1511,11 @@ function tokenizeSentence() {
       </div>
       <div class="stat-card">
         <div class="stat-name">Chars / Token</div>
-        <div class="stat-value" style="color:var(--accent-cyan);">${ratio}</div>
+        <div class="stat-value" style="color:var(--semantic-cyan);">${ratio}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-name">Subword Chunks</div>
-        <div class="stat-value" style="color:${subwordsCount ? 'var(--accent-amber)' : 'var(--text-primary)'};">${subwordsCount}</div>
+        <div class="stat-name">Subwords</div>
+        <div class="stat-value">${subwordsCount}</div>
       </div>
     </div>
   `;
@@ -1588,13 +1536,12 @@ function showChipInspector(e, chip) {
   document.getElementById('ci-text').textContent = text;
   document.getElementById('ci-id').textContent = id;
   document.getElementById('ci-type').textContent = type;
-  document.getElementById('ci-type').className = `tag-badge ${type === 'Word' ? 'tag-word' : (type === 'Subword' ? 'tag-subword' : 'tag-special')}`;
   document.getElementById('ci-freq').textContent = wordCounts[text] || (type === 'Subword' ? 'Subword segment' : '-');
   document.getElementById('ci-bytes').textContent = new TextEncoder().encode(text).length + ' bytes';
 
   const rect = chip.getBoundingClientRect();
   inspector.style.display = 'block';
-  inspector.style.top = `${window.scrollY + rect.bottom + 8}px`;
+  inspector.style.top = `${window.scrollY + rect.bottom + 6}px`;
   inspector.style.left = `${Math.min(window.innerWidth - 280, Math.max(16, rect.left))}px`;
 }
 
@@ -1638,14 +1585,14 @@ function renderSelfAttention(tokens) {
   tableHtml += "</tr></thead><tbody>";
 
   for (let i = 0; i < n; i++) {
-    tableHtml += `<tr><td style="font-weight:700;">${escapeHtml(subTokens[i].text)}</td>`;
+    tableHtml += `<tr><td style="font-weight:600;">${escapeHtml(subTokens[i].text)}</td>`;
     for (let j = 0; j < n; j++) {
       const weight = scores[i][j];
       const pct = (weight * 100).toFixed(1);
-      const intensity = Math.min(1, weight * 2.5);
+      const intensity = Math.min(1, weight * 2.2);
       const bg = currentTheme === 'dark' 
-        ? `rgba(168, 85, 247, ${intensity * 0.85})` 
-        : `rgba(126, 34, 206, ${intensity * 0.5})`;
+        ? `rgba(237, 237, 237, ${intensity * 0.35})` 
+        : `rgba(23, 23, 23, ${intensity * 0.25})`;
 
       tableHtml += `<td class="attn-cell" style="background:${bg}; text-align:center;" 
                         title="${escapeHtml(subTokens[i].text)} → ${escapeHtml(subTokens[j].text)}: ${pct}%"
@@ -1660,9 +1607,9 @@ function renderSelfAttention(tokens) {
   container.innerHTML = `<div class="table-box">${tableHtml}</div>`;
 
   inspector.innerHTML = `
-    <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:14px;">
-      <span style="font-size:12px; font-weight:600; color:var(--text-secondary);">Attention Link Details:</span>
-      <div id="attn-detail-text" style="font-size:13px; font-weight:700; color:var(--accent-purple); margin-top:4px;">Hover any cell in the heatmap</div>
+    <div style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:12px;">
+      <span style="font-size:11px; font-weight:500; color:var(--text-muted);">Attention link details</span>
+      <div id="attn-detail-text" style="font-size:13px; font-weight:600; color:var(--text-primary); margin-top:2px;">Hover any cell in the heatmap</div>
     </div>
   `;
 }
@@ -1672,9 +1619,9 @@ function highlightAttention(i, j, weight, tokenA, tokenB) {
   if (!detailEl) return;
   const pct = (weight * 100).toFixed(1);
   detailEl.innerHTML = `
-    Query <code>${tokenA}</code> attends to Key <code>${tokenB}</code>: <span style="color:var(--text-primary); font-weight:700;">${pct}%</span>
-    <div class="sim-bar-wrapper" style="margin-top:6px;">
-      <div class="sim-track"><div class="sim-fill" style="width:${pct}%; background:var(--accent-purple);"></div></div>
+    Query <code>${tokenA}</code> attends to Key <code>${tokenB}</code>: <span>${pct}%</span>
+    <div class="sim-bar-wrapper" style="margin-top:4px;">
+      <div class="sim-track"><div class="sim-fill" style="width:${pct}%;"></div></div>
     </div>
   `;
 }
@@ -1761,14 +1708,14 @@ function pcaTo3D(vectors) {
     const p2 = ((eigenvalues[1] / totalVariance) * 100).toFixed(1);
     const p3 = ((eigenvalues[2] / totalVariance) * 100).toFixed(1);
     varBox.innerHTML = `
-      <div class="stat-card" style="padding:6px 12px;">
-        <span class="stat-name">PC1 Variance</span>: <strong style="font-family:var(--font-mono);">${p1}%</strong>
+      <div class="stat-card" style="padding:4px 10px;">
+        <span class="stat-name">PC1 variance</span>: <strong style="font-family:var(--font-mono);">${p1}%</strong>
       </div>
-      <div class="stat-card" style="padding:6px 12px;">
-        <span class="stat-name">PC2 Variance</span>: <strong style="color:var(--accent-cyan); font-family:var(--font-mono);">${p2}%</strong>
+      <div class="stat-card" style="padding:4px 10px;">
+        <span class="stat-name">PC2 variance</span>: <strong style="color:var(--semantic-cyan); font-family:var(--font-mono);">${p2}%</strong>
       </div>
-      <div class="stat-card" style="padding:6px 12px;">
-        <span class="stat-name">PC3 Variance</span>: <strong style="color:var(--accent-emerald); font-family:var(--font-mono);">${p3}%</strong>
+      <div class="stat-card" style="padding:4px 10px;">
+        <span class="stat-name">PC3 variance</span>: <strong style="color:var(--semantic-positive); font-family:var(--font-mono);">${p3}%</strong>
       </div>
     `;
   }
@@ -1782,21 +1729,21 @@ function pcaTo3D(vectors) {
 // =====================================================================
 function drawPlot(points, sentences) {
   const isDark = currentTheme === "dark";
-  const bgCol = isDark ? "#0e0e11" : "#ffffff";
+  const bgCol = isDark ? "#101011" : "#ffffff";
   const gridCol = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)";
-  const textCol = isDark ? "#a1a1aa" : "#52525b";
+  const textCol = isDark ? "#85858b" : "#737373";
 
   const colors = sentences.map(s => {
     if (s === userText) return isDark ? "#f59e0b" : "#d97706";
     const lower = s.toLowerCase();
     if (lower.includes("cat") || lower.includes("dog") || lower.includes("kitten") || lower.includes("bat") || lower.includes("feline")) return isDark ? "#06b6d4" : "#0284c7";
     if (lower.includes("python") || lower.includes("program") || lower.includes("coding") || lower.includes("software")) return isDark ? "#3b82f6" : "#2563eb";
-    if (lower.includes("market") || lower.includes("stock") || lower.includes("share") || lower.includes("price")) return isDark ? "#10b981" : "#059669";
+    if (lower.includes("market") || lower.includes("stock") || lower.includes("share") || lower.includes("price")) return isDark ? "#4cc38a" : "#16a34a";
     if (lower.includes("star") || lower.includes("galaxy") || lower.includes("telescope") || lower.includes("astronaut")) return isDark ? "#a855f7" : "#7e22ce";
-    return isDark ? "#71717a" : "#475569";
+    return isDark ? "#a1a1a6" : "#525252";
   });
 
-  const sizes = sentences.map(s => (s === userText ? 13 : 7));
+  const sizes = sentences.map(s => (s === userText ? 11 : 6));
 
   const tracePoints = {
     type: "scatter3d",
@@ -1809,7 +1756,7 @@ function drawPlot(points, sentences) {
     hoverinfo: "text",
     textposition: "top center",
     textfont: {
-      family: "Plus Jakarta Sans, sans-serif",
+      family: "Inter, sans-serif",
       size: 11,
       color: textCol
     },
@@ -1818,8 +1765,8 @@ function drawPlot(points, sentences) {
       color: colors,
       opacity: 0.9,
       line: {
-        color: isDark ? "#18181b" : "#ffffff",
-        width: 1.5
+        color: isDark ? "#19191b" : "#ffffff",
+        width: 1
       }
     }
   };
@@ -1848,7 +1795,7 @@ function drawPlot(points, sentences) {
         z: [points[userIdx][2], points[bestIdx][2]],
         line: {
           color: isDark ? "#f59e0b" : "#d97706",
-          width: 3,
+          width: 2,
           dash: "dot"
         },
         hoverinfo: "none",
@@ -1869,10 +1816,10 @@ function drawPlot(points, sentences) {
       hoverinfo: "text",
       textposition: "bottom center",
       marker: {
-        size: 13,
+        size: 11,
         color: isDark ? "#a855f7" : "#7e22ce",
         symbol: "diamond",
-        line: { color: "#ffffff", width: 2 }
+        line: { color: "#ffffff", width: 1.5 }
       }
     });
   }
@@ -1921,7 +1868,7 @@ function drawPlot(points, sentences) {
     if (eventData.points && eventData.points.length > 0) {
       const p = eventData.points[0];
       const text = p.hovertext || p.text;
-      document.getElementById("hud-status").textContent = "Inspecting Node";
+      document.getElementById("hud-status").textContent = "Inspecting node";
       document.getElementById("hud-point").innerHTML = `
         <strong>${escapeHtml(text)}</strong><br>
         (x: ${p.x.toFixed(2)}, y: ${p.y.toFixed(2)}, z: ${p.z.toFixed(2)})
@@ -1930,7 +1877,7 @@ function drawPlot(points, sentences) {
   });
 
   plotEl.on('plotly_unhover', function() {
-    document.getElementById("hud-status").textContent = "Active";
+    document.getElementById("hud-status").textContent = "Ready";
     document.getElementById("hud-point").textContent = "Rotate or hover points to inspect";
   });
 }
@@ -1949,7 +1896,7 @@ function setupArithmeticSelectors(sentences) {
   selC.innerHTML = "";
 
   sentences.forEach((s, idx) => {
-    const text = s.length > 38 ? s.slice(0, 38) + "…" : s;
+    const text = s.length > 36 ? s.slice(0, 36) + "…" : s;
     selA.appendChild(new Option(`[S${idx+1}] ${text}`, idx));
     selB.appendChild(new Option(`[S${idx+1}] ${text}`, idx));
     selC.appendChild(new Option(`[S${idx+1}] ${text}`, idx));
@@ -2002,17 +1949,17 @@ function computeArithmetic() {
   const pct = Math.round(Math.max(0, bestScore) * 100);
 
   document.getElementById("arithmetic-result-box").innerHTML = `
-    <h3 style="font-size:14px; color:var(--text-primary); margin-bottom:10px;">Predicted Nearest Semantic Target</h3>
-    <div style="background:var(--bg-input); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:12px; margin-bottom:12px;">
-      <div style="font-size:11px; color:var(--text-secondary); text-transform:uppercase; font-weight:700;">Nearest Sentence:</div>
-      <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin:4px 0;">${escapeHtml(lastSentences[bestIdx])}</div>
+    <h3 style="font-size:13px; color:var(--text-primary); margin-bottom:8px;">Predicted nearest target</h3>
+    <div style="background:var(--bg-input); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:10px; margin-bottom:10px;">
+      <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;">Nearest sentence</div>
+      <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin:2px 0;">${escapeHtml(lastSentences[bestIdx])}</div>
       <div class="sim-bar-wrapper">
-        <div class="sim-track"><div class="sim-fill" style="width:${pct}%; background:var(--accent-purple);"></div></div>
-        <span class="sim-value" style="color:var(--text-primary);">${bestScore.toFixed(3)}</span>
+        <div class="sim-track"><div class="sim-fill" style="width:${pct}%;"></div></div>
+        <span class="sim-value">${bestScore.toFixed(3)}</span>
       </div>
     </div>
     <div style="font-size:12px; color:var(--text-secondary);">
-      The resultant vector has been projected as a <strong>Purple Diamond</strong> in the 3D Latent Space above!
+      The resultant vector is projected as a diamond in the 3D space above.
     </div>
   `;
 
@@ -2034,7 +1981,7 @@ function renderSimilarityMatrix(vectors, sentences) {
 
   let bodyHtml = "";
   for (let i = 0; i < n; i++) {
-    let rowCells = `<td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(sentences[i])}">
+    let rowCells = `<td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(sentences[i])}">
       <strong>S${i + 1}:</strong> ${escapeHtml(sentences[i])}
     </td>`;
 
@@ -2043,8 +1990,8 @@ function renderSimilarityMatrix(vectors, sentences) {
       const angleDeg = (Math.acos(Math.min(1, Math.max(-1, score))) * (180 / Math.PI)).toFixed(0);
       const intensity = Math.max(0, score);
       const cellBg = currentTheme === 'dark' 
-        ? `rgba(59, 130, 246, ${intensity * 0.7})` 
-        : `rgba(9, 9, 11, ${intensity * 0.25})`;
+        ? `rgba(237, 237, 237, ${intensity * 0.22})` 
+        : `rgba(23, 23, 23, ${intensity * 0.18})`;
 
       rowCells += `<td style="background:${cellBg}; text-align:center; cursor:pointer;" 
                        title="S${i+1} vs S${j+1}&#10;Similarity: ${score.toFixed(3)}&#10;Angle: ${angleDeg}°"
@@ -2084,7 +2031,7 @@ function showClosestPairs(vectors, sentences) {
     rows += `<tr>
       <td style="font-weight:500;">${escapeHtml(p.a)}</td>
       <td style="font-weight:500;">${escapeHtml(p.b)}</td>
-      <td style="min-width:120px;">
+      <td style="min-width:110px;">
         <div class="sim-bar-wrapper">
           <div class="sim-track"><div class="sim-fill" style="width:${pct}%;"></div></div>
           <span class="sim-value">${p.score.toFixed(3)}</span>
@@ -2094,14 +2041,14 @@ function showClosestPairs(vectors, sentences) {
   }
 
   document.getElementById("pairs-output").innerHTML = `
-    <h3 style="font-size:14px; font-weight:700; margin-bottom:8px; color:var(--text-primary);">Top 5 Most Similar Sentence Pairs</h3>
+    <h3 style="font-size:13px; font-weight:600; margin-bottom:6px; color:var(--text-primary);">Top 5 similar pairs</h3>
     <div class="table-box">
       <table>
         <thead>
           <tr>
             <th>Sentence A</th>
             <th>Sentence B</th>
-            <th>Cosine Similarity</th>
+            <th>Cosine similarity</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -2124,12 +2071,12 @@ function updateProbeSelectors(sentences) {
   sentences.forEach((s, idx) => {
     const optA = document.createElement("option");
     optA.value = idx;
-    optA.textContent = `[S${idx + 1}] ${s.length > 40 ? s.slice(0, 40) + "…" : s}`;
+    optA.textContent = `[S${idx + 1}] ${s.length > 36 ? s.slice(0, 36) + "…" : s}`;
     selA.appendChild(optA);
 
     const optB = document.createElement("option");
     optB.value = idx;
-    optB.textContent = `[S${idx + 1}] ${s.length > 40 ? s.slice(0, 40) + "…" : s}`;
+    optB.textContent = `[S${idx + 1}] ${s.length > 36 ? s.slice(0, 36) + "…" : s}`;
     selB.appendChild(optB);
   });
 
@@ -2168,31 +2115,31 @@ function calculateProbe() {
     let cells = "";
     for (const val of vec) {
       const col = val >= 0 
-        ? `rgba(59, 130, 246, ${Math.min(1, val * 3)})` 
-        : `rgba(244, 63, 94, ${Math.min(1, Math.abs(val) * 3)})`;
+        ? `rgba(237, 237, 237, ${Math.min(1, val * 3.5)})` 
+        : `rgba(229, 72, 77, ${Math.min(1, Math.abs(val) * 3.5)})`;
       cells += `<div class="vector-cell" style="background:${col};" title="Value: ${val.toFixed(3)}"></div>`;
     }
     return `<div class="vector-strip">${cells}</div>`;
   };
 
   document.getElementById("probe-results").innerHTML = `
-    <div style="margin-top:12px;">
+    <div style="margin-top:10px;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:12px; color:var(--text-secondary);">Cosine Similarity:</span>
-        <span style="font-family:var(--font-mono); font-size:15px; font-weight:700; color:var(--accent-emerald);">${score.toFixed(4)}</span>
+        <span style="font-size:12px; color:var(--text-secondary);">Cosine similarity:</span>
+        <span style="font-family:var(--font-mono); font-size:14px; font-weight:600; color:var(--text-primary);">${score.toFixed(4)}</span>
       </div>
-      <div class="sim-bar-wrapper" style="margin-bottom:10px;">
+      <div class="sim-bar-wrapper" style="margin-bottom:8px;">
         <div class="sim-track"><div class="sim-fill" style="width:${pct}%;"></div></div>
       </div>
-      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); margin-bottom:12px;">
-        <span>Geometric Angle: <strong style="color:var(--text-primary);">${angleDeg}°</strong></span>
-        <span>${score > 0.7 ? '🔥 Highly Aligned' : (score > 0.3 ? '⚡ Moderate Alignment' : '❄️ Orthogonal / Dissimilar')}</span>
+      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); margin-bottom:10px;">
+        <span>Angle: <strong style="color:var(--text-primary); font-family:var(--font-mono);">${angleDeg}°</strong></span>
+        <span>${score > 0.7 ? 'Strong alignment' : (score > 0.3 ? 'Moderate alignment' : 'Low alignment')}</span>
       </div>
 
-      <div style="font-size:11px; color:var(--text-tertiary); margin-top:8px;">Sentence A 64-D Vector:</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:6px;">Sentence A 64-D vector</div>
       ${renderSparkline(vecA)}
 
-      <div style="font-size:11px; color:var(--text-tertiary); margin-top:8px;">Sentence B 64-D Vector:</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:6px;">Sentence B 64-D vector</div>
       ${renderSparkline(vecB)}
     </div>
   `;
@@ -2239,8 +2186,8 @@ async function addUserWord() {
 
   const tokens = encode(text);
   document.getElementById("new-word-output").innerHTML = `
-    <div style="margin-top:12px;">
-      <span style="font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Step 1: Tokens</span>
+    <div style="margin-top:10px;">
+      <span style="font-size:11px; font-weight:500; color:var(--text-muted);">Step 1: Tokens</span>
       ${renderChips(tokens)}
       <div id="new-word-vector"></div>
     </div>
@@ -2283,18 +2230,18 @@ function showUserWordDetails(vectors, sentences) {
   const vecPreview = v.slice(0, 8).map(x => x.toFixed(2)).join(", ");
 
   document.getElementById("new-word-vector").innerHTML = `
-    <div style="margin-top:10px;">
-      <span style="font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">Step 2: Vector Slice [8 of 64]</span>
+    <div style="margin-top:8px;">
+      <span style="font-size:11px; font-weight:500; color:var(--text-muted);">Step 2: Vector slice [8 of 64]</span>
       <div style="font-family:var(--font-mono); font-size:11px; background:var(--bg-input); padding:6px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-subtle); margin-top:4px;">
         [${vecPreview}, …]
       </div>
-      <div style="margin-top:12px;">
-        <span style="font-size:11px; font-weight:600; color:var(--text-secondary); text-transform:uppercase;">
-          Step 3: Closest Neighbors in Latent Space
+      <div style="margin-top:10px;">
+        <span style="font-size:11px; font-weight:500; color:var(--text-muted);">
+          Step 3: Closest neighbors in latent space
         </span>
-        <div class="table-box" style="margin-top:6px;">
+        <div class="table-box" style="margin-top:4px;">
           <table>
-            <thead><tr><th>Nearest Sentence</th><th>Cosine Similarity</th></tr></thead>
+            <thead><tr><th>Nearest sentence</th><th>Cosine similarity</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
@@ -2356,7 +2303,7 @@ document.getElementById("tokenize-btn").addEventListener("click", tokenizeSenten
 document.getElementById("quick-sample-btn").addEventListener("click", () => {
   const samples = [
     "The dogs liked the sunny zebra.",
-    "A clever kitten jumped over the sleeping dog.",
+    "A kitten jumped over the sleeping dog.",
     "Python programmers debug algorithms in the terminal.",
     "Share prices tumbled when markets fell today."
   ];
